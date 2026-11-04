@@ -93,6 +93,7 @@
     order: 2;
   }
   .intro .teach,
+  .intro .advisory,
   .intro > p:not(.drill-facts):not(.mine-note) {
     order: 3;
   }

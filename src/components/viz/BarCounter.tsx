@@ -19,6 +19,7 @@ export function BarCounter({
   label,
   hideFrom,
   target,
+  still,
 }: {
   timing: RoundTiming
   cells: number
@@ -26,12 +27,15 @@ export function BarCounter({
   label?: string
   hideFrom?: number
   target?: { cell: number; text: string }
+  /** Only laid out (e.g. to reserve room): does not follow the audio clock. */
+  still?: boolean
 }) {
   const len = (unit === 'bar' ? 240 : 60) / timing.bpm
   const loop = hideFrom === undefined && !target
   // whole cells heard since the start; -1 before it
   const [pos, setPos] = useState(-1)
   useEffect(() => {
+    if (still) return
     let raf = 0
     const tick = () => {
       const now = heardTime(performance.now())
@@ -41,7 +45,7 @@ export function BarCounter({
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [timing.start, timing.end, len])
+  }, [timing.start, timing.end, len, still])
 
   const cycle = loop && pos >= 0 ? Math.floor(pos / cells) : 0
   const current = pos < 0 ? -1 : loop ? pos % cells : pos < cells ? pos : -1
@@ -62,7 +66,7 @@ export function BarCounter({
       {(label || (loop && unit === 'beat')) && (
         <div className="bc-label">
           <span>{label}</span>
-          {loop && unit === 'beat' && <span>{bar ? `Bar ${bar}` : ' '}</span>}
+          {loop && unit === 'beat' && <span>{bar ? `Bar ${bar}` : '\u00a0'}</span>}
         </div>
       )}
       <div className="bc-cells" style={{ gridTemplateColumns: `repeat(${cells}, 1fr)` }}>

@@ -1,6 +1,6 @@
 // No-audio drills: tempo maths, Camelot, vocabulary, signal flow and set building.
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Swap, Value } from '../components/Swap'
+import { Reserve, Swap, Value } from '../components/Swap'
 import { CamelotWheel } from '../components/viz/diagrams'
 import { pick, shuffle } from '../lib/clips'
 import { readyTracks } from '../lib/library'
@@ -441,47 +441,78 @@ export function SignalFlow({ onDone }: DrillProps) {
           <Value v={firstTry} /> of {total} first try
         </span>
       </div>
-      <Swap k={i}>
+      <Swap k={i} hold>
         <h2 className="prompt">{r.title}</h2>
         <p className="sub">{r.about} Click the steps in order.</p>
-        <ol className="order">
-          {r.steps.slice(0, placed).map((x, k) => (
-            <li key={x.step} className="good">
-              <span>{x.step}</span>
-              {k === placed - 1 && <span className="order-why muted small">{x.why}</span>}
-            </li>
-          ))}
-          {!done && <li className="order-next muted">Step {placed + 1}?</li>}
-        </ol>
-        {!done ? (
-          <div className="chips">
-            {pool
-              .filter((x) => !r.steps.slice(0, placed).some((y) => y.step === x))
-              .map((x) => (
-                <button key={x} className={wrongAt?.step === x ? 'chip-wrong' : undefined} data-n={wrongAt?.step === x ? wrongAt.n : undefined} onClick={() => pick(x)}>
-                  {x}
-                </button>
+        {/* every step has its row from the start, and the room for the longest note: the chips under it stay put */}
+        <Reserve
+          shape={r.steps.map((_, j) => (
+            <ol key={j} className="order">
+              {r.steps.map((x, k) => (
+                <li key={x.step} className="good">
+                  <span>{x.step}</span>
+                  {k === j && <span className="order-why muted small">{x.why}</span>}
+                </li>
               ))}
-          </div>
-        ) : (
-          <p className="fade-in">
-            {r.steps.length} steps in order.{' '}
-            <button className="primary" onClick={advance} autoFocus>
-              {last ? 'Finish' : 'Next routine'} <kbd>↵</kbd>
-            </button>
-          </p>
-        )}
-        {wrongAt && !done && (
-          <p className="muted small" role="status">
-            Not step {placed + 1}. {placed > 0 ? `After “${r.steps[placed - 1].step}”, what comes next?` : 'What comes first?'}
-          </p>
-        )}
+            </ol>
+          ))}
+        >
+        <ol className="order">
+          {r.steps.map((x, k) =>
+            k < placed ? (
+              <li key={x.step} className="good">
+                <span>{x.step}</span>
+                {k === placed - 1 && <span className="order-why muted small">{x.why}</span>}
+              </li>
+            ) : k === placed ? (
+              <li key={x.step} className="order-next muted">
+                Step {placed + 1}?
+              </li>
+            ) : (
+              <li key={x.step} className="invisible" aria-hidden="true">
+                <span>{x.step}</span>
+              </li>
+            ),
+          )}
+        </ol>
+        </Reserve>
+        <Reserve shape={<div className="chips">{pool.map((x) => <button key={x}>{x}</button>)}</div>}>
+          {!done ? (
+            <div className="chips">
+              {/* a placed chip leaves an empty slot, so the rest do not repack */}
+              {pool.map((x) =>
+                r.steps.slice(0, placed).some((y) => y.step === x) ? (
+                  <button key={x} className="invisible" aria-hidden="true" tabIndex={-1} disabled>
+                    {x}
+                  </button>
+                ) : (
+                  <button key={x} className={wrongAt?.step === x ? 'chip-wrong' : undefined} data-n={wrongAt?.step === x ? wrongAt.n : undefined} onClick={() => pick(x)}>
+                    {x}
+                  </button>
+                ),
+              )}
+            </div>
+          ) : (
+            <p className="fade-in">
+              {r.steps.length} steps in order.{' '}
+              <button className="primary" onClick={advance} autoFocus>
+                {last ? 'Finish' : 'Next routine'} <kbd>↵</kbd>
+              </button>
+            </p>
+          )}
+        </Reserve>
+        {/* the hint's line is kept, sized for the longest hint this routine can give */}
+        <Reserve shape={r.steps.map((x, k) => <p key={k} className="muted small">Not step {k + 2}. After “{x.step}”, what comes next?</p>)}>
+          {wrongAt && !done && (
+            <p className="muted small" role="status">
+              Not step {placed + 1}. {placed > 0 ? `After “${r.steps[placed - 1].step}”, what comes next?` : 'What comes first?'}
+            </p>
+          )}
+        </Reserve>
       </Swap>
-      {!done && (
-        <button className="ghost skip" onClick={skip}>
-          {last ? 'Skip and finish' : 'Skip routine'} <kbd>S</kbd>
-        </button>
-      )}
+      <button className={`ghost skip${done ? ' invisible' : ''}`} onClick={skip} disabled={done} aria-hidden={done || undefined}>
+        {last ? 'Skip and finish' : 'Skip routine'} <kbd>S</kbd>
+      </button>
     </div>
   )
 }
@@ -622,6 +653,30 @@ export function SetBuilder({ onDone }: DrillProps) {
   const [opener, ...crate] = crates[ci]
   const set = [opener, ...picked]
   const left = crate.filter((t) => !picked.includes(t))
+  const scored = (order: SetTrack[], r: { score: number; best: SetTrack[] }, on: boolean) => (
+    <div className={on ? 'sb-result fade-in' : 'sb-result'} role={on ? 'status' : undefined}>
+      <h3>
+        {verdict(r.score)} <span className="muted">· {r.score} / 1000</span>
+      </h3>
+      <Notes set={order} />
+      <h3>The best order</h3>
+      <ol className="set">
+        {r.best.map((t) => (
+          <li key={t.name}>
+            <div className="set-row">
+              <TrackRow t={t} />
+            </div>
+          </li>
+        ))}
+      </ol>
+      <Notes set={r.best} />
+      <div className="row">
+        <button className="primary" onClick={on ? () => next() : undefined} autoFocus={on}>
+          {ci + 1 >= CRATES ? 'Finish' : 'Next crate'}
+        </button>
+      </div>
+    </div>
+  )
   const submit = () => {
     const r = scoreSet(set)
     setResult(r)
@@ -645,7 +700,7 @@ export function SetBuilder({ onDone }: DrillProps) {
         </span>
         <span>{scores.length ? <>Average <Value v={Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)} /></> : '\u00a0'}</span>
       </div>
-      <Swap k={ci}>
+      <Swap k={ci} hold>
         <p className="muted">Build the set from the opener. Tap tracks in the order you would play them: small tempo steps, compatible keys, energy that builds.</p>
         <div className="sb-cols">
           <section>
@@ -659,71 +714,61 @@ export function SetBuilder({ onDone }: DrillProps) {
                   </div>
                 </li>
               ))}
-            </ol>
-            {!result && (
-              <div className="row">
-                <button onClick={() => setPicked(picked.slice(0, -1))} disabled={!picked.length}>
-                  Undo
-                </button>
-                <button className="primary" onClick={submit} disabled={left.length > 0}>
-                  Play this order
-                </button>
-                <button
-                  className="ghost"
-                  onClick={() => {
-                    const sc = [...scores, 0]
-                    setScores(sc)
-                    next(sc)
-                  }}
-                >
-                  {ci + 1 >= CRATES ? 'Skip and finish' : 'Skip crate'}
-                </button>
-              </div>
-            )}
-          </section>
-          {!result && (
-            <section>
-              <h3>Crate</h3>
-              {left.length ? (
-                <ul className="sb-crate">
-                  {left.map((t) => (
-                    <li key={t.name}>
-                      <button className="set-row" onClick={() => setPicked([...picked, t])}>
-                        <TrackRow t={t} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="muted small">Crate empty. Play the order, or undo to change it.</p>
-              )}
-            </section>
-          )}
-        </div>
-        {result && (
-          <div className="sb-result fade-in" role="status">
-            <h3>
-              {verdict(result.score)} <span className="muted">· {result.score} / 1000</span>
-            </h3>
-            <Notes set={set} />
-            <h3>The best order</h3>
-            <ol className="set">
-              {result.best.map((t) => (
-                <li key={t.name}>
+              {/* empty rows keep the set at its full length, so the buttons under it stay put */}
+              {left.map((t) => (
+                <li key={t.name} className="invisible" aria-hidden="true">
                   <div className="set-row">
                     <TrackRow t={t} />
                   </div>
                 </li>
               ))}
             </ol>
-            <Notes set={result.best} />
-            <div className="row">
-              <button className="primary" onClick={() => next()} autoFocus>
-                {ci + 1 >= CRATES ? 'Finish' : 'Next crate'}
+            {/* after scoring, the buttons and the crate keep their place, invisible, so the result below does not jump up */}
+            <div className={result ? 'row invisible' : 'row'} aria-hidden={!!result || undefined}>
+              <button onClick={() => setPicked(picked.slice(0, -1))} disabled={!picked.length || !!result}>
+                Undo
+              </button>
+              <button className="primary" onClick={submit} disabled={left.length > 0 || !!result}>
+                Play this order
+              </button>
+              <button
+                className="ghost"
+                disabled={!!result}
+                onClick={() => {
+                  const sc = [...scores, 0]
+                  setScores(sc)
+                  next(sc)
+                }}
+              >
+                {ci + 1 >= CRATES ? 'Skip and finish' : 'Skip crate'}
               </button>
             </div>
-          </div>
-        )}
+          </section>
+          <section className={result ? 'invisible' : undefined} aria-hidden={!!result || undefined}>
+            <h3>Crate</h3>
+            {/* a picked track leaves an empty slot, so the others do not move under the pointer */}
+            <ul className="sb-crate">
+              {crate.map((t) =>
+                picked.includes(t) ? (
+                  <li key={t.name} className="invisible" aria-hidden="true">
+                    <button className="set-row" tabIndex={-1} disabled>
+                      <TrackRow t={t} />
+                    </button>
+                  </li>
+                ) : (
+                  <li key={t.name}>
+                    <button className="set-row" onClick={() => setPicked([...picked, t])}>
+                      <TrackRow t={t} />
+                    </button>
+                  </li>
+                ),
+              )}
+            </ul>
+            {!left.length && <p className="muted small sb-empty fade-in">Crate empty. Play the order, or undo to change it.</p>}
+          </section>
+        </div>
+        {/* the scored result's room is kept under the crate from the start, so scoring does not push the page */}
+        <Reserve shape={scored(crates[ci], { score: 1000, best: crates[ci] }, false)}>{result && scored(set, result, true)}</Reserve>
       </Swap>
     </div>
   )

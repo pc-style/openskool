@@ -1,6 +1,7 @@
 /* Live tap rating on the tap pad, and the grade tally on timing results. */
 
 .tappad .tap-rating {
+  align-self: stretch;
   min-height: 1.5em;
   font-size: 0.95rem;
   font-weight: 400;
@@ -261,7 +262,8 @@
   width: 100%;
   max-width: none;
 }
-.center > .swap:has(.deck) {
+/* the phase body always spans the column, so its width does not depend on which phase (or outgoing copy) it holds */
+.center > .swap.phase-body {
   align-self: stretch;
 }
 .readout .hot {

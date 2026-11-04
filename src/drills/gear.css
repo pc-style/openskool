@@ -163,7 +163,7 @@
   flex-direction: column;
   gap: 12px;
 }
-.gear-card > .swap {
+.gear-card > .gear-text {
   flex: 1;
 }
 .gear-card h2 {
@@ -179,6 +179,10 @@
 }
 .gear-hint {
   margin-top: 4px;
+}
+.gear-foot button {
+  flex: none;
+  white-space: nowrap;
 }
 .gear-foot {
   display: flex;

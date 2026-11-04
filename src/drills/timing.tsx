@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ac, click, out, play, stopAll, track } from '../audio/engine'
 import { barLen, barTime, beatLen, getClip, partnerClip, pickBar, type Clip } from '../lib/clips'
 import { getSettings } from '../lib/progress'
-import { Swap, Value } from '../components/Swap'
+import { Reserve, Swap, Value } from '../components/Swap'
 import { TapTimeline } from '../components/viz/diagrams'
 import { BarCounter } from '../components/viz/BarCounter'
 import {
@@ -163,10 +163,10 @@ function useUnmountStop() {
 }
 
 /** A Skip button with the S key: the round scores nothing and the next one starts from its Play screen. */
-function Skip({ onSkip, last, what = 'round' }: { onSkip: () => void; last: boolean; what?: string }) {
+function Skip({ onSkip, last, what = 'round', off }: { onSkip: () => void; last: boolean; what?: string; off?: boolean }) {
   const cb = useRef(onSkip)
   useLayoutEffect(() => {
-    cb.current = onSkip
+    cb.current = off ? () => {} : onSkip
   })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -176,7 +176,8 @@ function Skip({ onSkip, last, what = 'round' }: { onSkip: () => void; last: bool
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   return (
-    <button className="ghost skip" onClick={onSkip}>
+    // `off` keeps the button's place (invisible, inactive), so the layout below it does not move
+    <button className={`ghost skip${off ? ' invisible' : ''}`} onClick={onSkip} disabled={off} aria-hidden={off || undefined}>
       {last ? 'Skip and finish' : `Skip ${what}`} <kbd>S</kbd>
     </button>
   )
@@ -211,6 +212,8 @@ const DB_STAGES = [
   { name: 'Long run', lead: 2, scored: 8, click: 'none', random: true, help: 'Same as before, for eight bars. Stay locked on.' },
 ] as const
 const DB_TOTAL = DB_STAGES.reduce((n, x) => n + x.scored, 0)
+/** Timing for a bar counter that is only laid out, never shown. */
+const STILL_TIMING: RoundTiming = { start: 0, bpm: 120 }
 const GRADE_RANK: Record<TapGrade, number> = { perfect: 0, good: 1, close: 2, off: 3, miss: 4 }
 interface DbStage {
   errs: (number | null)[]
@@ -354,6 +357,33 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
     </ol>
   )
 
+  /** The playing deck. The other phases lay it out invisibly too, so every phase takes the same room. */
+  const deck = (live: boolean) => {
+    const grades = live ? dots : Array<null>(st.scored).fill(null)
+    const hits = grades.filter((g) => g === 'perfect' || g === 'good').length
+    return (
+      <div className="deck">
+        {/* the bars as a strip: free bars light; on the stages without a click, the counted bars stay dark */}
+        <BarCounter timing={timeline ?? STILL_TIMING} still={!live} cells={st.lead + st.scored} unit="bar" label="Bars" hideFrom={st.click === 'none' ? st.lead : st.lead + st.scored} />
+        <div className="deck-main">
+          <TapPad onPointerDown={onPad} label="Tap the 1" flash={live ? flash : 0} rating={live ? rating : null} />
+          <Readout
+            items={{
+              Stage: `${si + 1} / ${DB_STAGES.length}`,
+              'Last tap': <Value v={!live || rating?.err == null ? '—' : msr(rating.err)} />,
+              'On the 1': (
+                <>
+                  <Value v={hits} /> / {st.scored}
+                </>
+              ),
+            }}
+          />
+        </div>
+        <GradeDots grades={grades} pass={pass} />
+      </div>
+    )
+  }
+
   let content: React.ReactNode
   if (phase === 'ready' || phase === 'loading')
     content = (
@@ -366,30 +396,7 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
         </button>
       </div>
     )
-  else if (phase === 'playing') {
-    const hits = dots.filter((g) => g === 'perfect' || g === 'good').length
-    content = (
-      <div className="deck">
-        {/* the bars as a strip: free bars light; on the stages without a click, the counted bars stay dark */}
-        {timeline && <BarCounter timing={timeline} cells={st.lead + st.scored} unit="bar" label="Bars" hideFrom={st.click === 'none' ? st.lead : st.lead + st.scored} />}
-        <div className="deck-main">
-          <TapPad onPointerDown={onPad} label="Tap the 1" flash={flash} rating={rating} />
-          <Readout
-            items={{
-              Stage: `${si + 1} / ${DB_STAGES.length}`,
-              'Last tap': <Value v={rating?.err == null ? '—' : msr(rating.err)} />,
-              'On the 1': (
-                <>
-                  <Value v={hits} /> / {st.scored}
-                </>
-              ),
-            }}
-          />
-        </div>
-        <GradeDots grades={dots} pass={pass} />
-      </div>
-    )
-  }
+  else if (phase === 'playing') content = deck(true)
   else {
     const { errs, extras } = stages[si]!
     const { bpm, beat } = run.current
@@ -435,8 +442,10 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
   return (
     <div className="center">
       {stageStrip}
-      <Swap k={`${si}-${phase === 'loading' ? 'ready' : phase}`}>{content}</Swap>
-      {phase !== 'result' && <Skip onSkip={skip} last={last} what="stage" />}
+      <Swap k={`${si}-${phase === 'loading' ? 'ready' : phase}`} hold className="phase-body">
+        {phase === 'playing' ? content : <Reserve shape={deck(false)}>{content}</Reserve>}
+      </Swap>
+      <Skip onSkip={skip} last={last} what="stage" off={phase === 'result'} />
     </div>
   )
 }
@@ -469,10 +478,13 @@ function OneTapRounds({
   intro,
   label,
   waitLabel,
+  sizer,
   onDone,
 }: {
   rounds: number
   make: (i: number) => TapRound
+  /** Round i's verdicts at a nominal tempo, to size the verdict's room before the round has started. */
+  sizer: (i: number) => RoundInfo['describe']
   intro: string
   label: string
   /** Pad label while taps are still ignored. */
@@ -564,36 +576,68 @@ function OneTapRounds({
 
   const last = i + 1 >= rounds
   const lastErr = phase === 'result' ? errs[errs.length - 1] : undefined
+  // the verdict's room, the same in every round and phase: the longest of a few sample verdicts of every round
+  const samples = Array.from({ length: rounds }, (_, k) => SAMPLE_ERRS.map((e) => sizer(k)(e))).flat()
+  const shown = phase === 'result' && desc
+  const after = (on: boolean) => (
+    <div className="center">
+      <Reserve shape={samples.map((d, k) => <Verdict key={k} d={d} pts={250} />)}>
+        {on && shown && (
+          <div className="fade-in">
+            <Verdict d={desc.d} pts={desc.pts} />
+          </div>
+        )}
+      </Reserve>
+      <Reserve shape={<button className="primary">Next round</button>}>
+        {on && shown && (
+          <button className="primary fade-in" onClick={next} autoFocus>
+            {last ? 'Finish' : 'Next round'}
+          </button>
+        )}
+      </Reserve>
+      {/* the run's tally comes after the last round; its room is kept from the start */}
+      <Reserve
+        shape={
+          <>
+            <Tally errs={errs} />
+            <TapTimeline errs={Array<null>(rounds).fill(null)} />
+          </>
+        }
+      >
+        {on && shown && last && (
+          <div className="fade-in">
+            <Tally errs={errs} />
+            <TapTimeline errs={errs} />
+          </div>
+        )}
+      </Reserve>
+    </div>
+  )
+  /** The pad and readout with the verdict's room under them; the other phases lay it out invisibly. */
+  const deck = (on: boolean) => (
+    <div className="deck">
+      <BarCounter unit="bar" {...(counter ?? STILL_COUNTER)} still={!on} />
+      <div className="deck-main">
+        <TapPad onPointerDown={onPad} label={!on || armed || phase === 'result' || !waitLabel ? label : waitLabel} flash={on ? flash : 0} rating={on ? rating : null} disabled={!on || !live} />
+        <Readout
+          items={{
+            Round: `${i + 1} / ${rounds}`,
+            Tap: <Value v={!on || lastErr === undefined ? '—' : lastErr === null ? 'none' : msr(lastErr)} />,
+            Points: <Value v={Math.round(total)} />,
+          }}
+        />
+      </div>
+      {after(on)}
+    </div>
+  )
   return (
     <div className="center">
       {/* the pad stays put after the tap so its rating dissolves in place */}
-      <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase === 'result' ? 'playing' : phase}`}>
+      <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase === 'result' ? 'playing' : phase}`} hold className="phase-body">
         {phase === 'playing' || phase === 'result' ? (
-          <div className="deck">
-            {counter && <BarCounter unit="bar" {...counter} />}
-            <div className="deck-main">
-              <TapPad onPointerDown={onPad} label={live || phase === 'result' || !waitLabel ? label : waitLabel} flash={flash} rating={rating} disabled={!live} />
-              <Readout
-                items={{
-                  Round: `${i + 1} / ${rounds}`,
-                  Tap: <Value v={lastErr === undefined ? '—' : lastErr === null ? 'none' : msr(lastErr)} />,
-                  Points: <Value v={Math.round(total)} />,
-                }}
-              />
-            </div>
-            {phase === 'result' && desc && (
-              <div className="fade-in center">
-                <Verdict d={desc.d} pts={desc.pts} />
-                {last && <Tally errs={errs} />}
-                {last && <TapTimeline errs={errs} />}
-                <button className="primary" onClick={next} autoFocus>
-                  {last ? 'Finish' : 'Next round'}
-                </button>
-              </div>
-            )}
-          </div>
+          deck(true)
         ) : (
-          <>
+          <Reserve shape={deck(false)}>
             <p className="muted small">
               Round {i + 1} of {rounds} · <Value v={Math.round(total)} /> pts
             </p>
@@ -601,13 +645,19 @@ function OneTapRounds({
             <button className="primary big" onClick={begin} disabled={phase === 'loading'}>
               {phase === 'loading' ? 'Loading…' : 'Play'}
             </button>
-          </>
+          </Reserve>
         )}
       </Swap>
-      {phase !== 'result' && <Skip onSkip={skip} last={last} />}
+      <Skip onSkip={skip} last={last} off={phase === 'result'} />
     </div>
   )
 }
+
+/** Tap errors (s) whose verdicts size the verdict's room: no tap, perfect, close, too early, too late, a bar out. */
+const SAMPLE_ERRS = [null, 0.01, -0.15, -0.3, 0.3, 2, -2.9]
+/** A bar at 124 BPM, for sample verdicts: their wording barely depends on the tempo. */
+const NOMINAL_BAR = 240 / 124
+const STILL_COUNTER = { timing: STILL_TIMING, cells: 4, target: { cell: 3, text: '↓' }, label: 'Bar' }
 
 /** A snare roll that builds through one bar (8ths, then 16ths), so the drop is easier to feel in early rounds. */
 function snareRoll(from: number, bl: number) {
@@ -637,6 +687,23 @@ function snareRoll(from: number, bl: number) {
 // ---------- Drop Timing ----------
 const GAPS = [1, 2, 2, 4, 4]
 const DROP_PRE = 2
+/** A Drop Timing round's verdict for a tap error (s), after `gap` silent bars of `bl` s. */
+const dropDescribe =
+  (gap: number, bl: number) =>
+  (e: number | null): RoundDesc => {
+    const beat = bl / 4
+    const count = Array.from({ length: DROP_PRE + gap }, (_, k) => `${k + 1} 2 3 4`)
+    const tip = `Count: ${count.slice(0, DROP_PRE).join(' · ')} with the music, ${count.slice(DROP_PRE).join(' · ')} in the silence, then tap the next 1.`
+    if (e === null) return { verdict: 'No tap', tone: 'bad', explain: `The music came back after ${plural(gap, 'silent bar')} and the round ended a bar later.`, tip }
+    const t = tapTier(e, bl)
+    const explain =
+      t.verdict === 'Wrong bar'
+        ? `${barsText(e, bl)} (${msr(e)}). After ${plural(gap, 'silent bar')} you were a bar out: count bars, not just beats.`
+        : t.tone === 'bad'
+          ? `${howFar(e, beat)}. ${e <= -beat / 2 ? 'You tapped while the gap was still silent.' : e < 0 ? 'Just ahead of the drop: let the 1 arrive.' : 'The drop had already landed.'} A beat here is ${Math.round(beat * 1000)} ms.`
+          : `${msr(e)} from the drop, after ${plural(gap, 'silent bar')}. Perfect is within ${TAP_PERFECT * 1000} ms, Good within ${TAP_GOOD * 1000} ms, Close within ${TAP_CLOSE * 1000} ms.`
+    return { ...t, explain, tip }
+  }
 export function DropTiming({ source, onDone }: DrillProps) {
   const make = (i: number): TapRound => ({
     start: async () => {
@@ -655,26 +722,13 @@ export function DropTiming({ source, onDone }: DrillProps) {
       if (i < 2) snareRoll(target - bl, bl)
       // the counter hides through more of the silence each round
       const hideFrom = [undefined, pre + 1, pre, pre, pre - 1][i]
-      const count = Array.from({ length: pre + gap }, (_, k) => `${k + 1} 2 3 4`)
-      const pattern = `${count.slice(0, pre).join(' · ')} with the music, ${count.slice(pre).join(' · ')} in the silence, then tap the next 1`
       return {
         target,
         endsAt: target + bl,
         enableAt: at + pre * bl,
         points: (e) => 200 * tapCredit(e, beat),
         counter: { timing: { start: at, bpm: c.bpm }, cells: pre + gap + 1, hideFrom, target: { cell: pre + gap, text: '↓' }, label: 'Bar' },
-        describe: (e) => {
-          const tip = `Count: ${pattern}.`
-          if (e === null) return { verdict: 'No tap', tone: 'bad', explain: `The music came back after ${plural(gap, 'silent bar')} and the round ended a bar later.`, tip }
-          const t = tapTier(e, bl)
-          const explain =
-            t.verdict === 'Wrong bar'
-              ? `${barsText(e, bl)} (${msr(e)}). After ${plural(gap, 'silent bar')} you were a bar out: count bars, not just beats.`
-              : t.tone === 'bad'
-                ? `${howFar(e, beat)}. ${e <= -beat / 2 ? 'You tapped while the gap was still silent.' : e < 0 ? 'Just ahead of the drop: let the 1 arrive.' : 'The drop had already landed.'} A beat here is ${Math.round(beat * 1000)} ms.`
-                : `${msr(e)} from the drop, after ${plural(gap, 'silent bar')}. Perfect is within ${TAP_PERFECT * 1000} ms, Good within ${TAP_GOOD * 1000} ms, Close within ${TAP_CLOSE * 1000} ms.`
-          return { ...t, explain, tip }
-        },
+        describe: dropDescribe(gap, bl),
       }
     },
   })
@@ -682,6 +736,7 @@ export function DropTiming({ source, onDone }: DrillProps) {
     <OneTapRounds
       rounds={5}
       make={make}
+      sizer={(i) => dropDescribe(GAPS[i], NOMINAL_BAR)}
       onDone={onDone}
       intro="Two bars play, then silence for a set number of bars (round 1: 1 bar, later up to 4). Keep counting and tap on the 1 when the music comes back. The pad wakes up when the silence starts."
       label="Tap the drop"
@@ -691,6 +746,23 @@ export function DropTiming({ source, onDone }: DrillProps) {
 }
 
 // ---------- Phrase In ----------
+/** A Phrase In round's verdict for a tap error (s), with bars of `bl` s. */
+const phraseDescribe =
+  (bl: number, builtin: boolean) =>
+  (e: number | null): RoundDesc => {
+    const listen = builtin
+      ? 'In these grooves the kick and bass drop out on the last beat of bar 8 (house adds a clap fill), then a crash lands on the 1 of the new phrase.'
+      : 'At a phrase start listen for a crash, a bass change or a new layer coming in on the 1; the bar before often has a fill, a riser or a gap.'
+    const tip = 'Count the bars of A 1 to 8 on each downbeat; the pad wakes up two bars before the next phrase.'
+    if (e === null) return { verdict: 'No tap', tone: 'bad', explain: `The phrase started and B never came in. ${listen}`, tip }
+    const t = tapTier(e, bl)
+    const explain =
+      t.verdict === 'Wrong bar'
+        ? `You started B ${barsText(e, bl)}: mid-phrase, so B's changes land ${plural(Math.max(1, Math.round(Math.abs(e) / bl)), 'bar')} off A's and the structures clash. ${listen}`
+        : `B came in ${msr(e)} from A's phrase start${t.tone === 'bad' ? `, ${howFar(e, bl / 4)}` : ''}. ${listen}`
+    return { ...t, explain, tip }
+  }
+
 export function PhraseIn({ source, onDone }: DrillProps) {
   const make = (i: number): TapRound => ({
     start: async () => {
@@ -706,11 +778,6 @@ export function PhraseIn({ source, onDone }: DrillProps) {
       const target = phraseStart + 8 * bl
       const nb = pickBar(b, 9, true)
       const rate = a.bpm / b.bpm
-      const listen =
-        a.source === 'builtin'
-          ? 'In these grooves the kick and bass drop out on the last beat of bar 8 (house adds a clap fill), then a crash lands on the 1 of the new phrase.'
-          : 'At a phrase start listen for a crash, a bass change or a new layer coming in on the 1; the bar before often has a fill, a riser or a gap.'
-      const tip = 'Count the bars of A 1 to 8 on each downbeat; the pad wakes up two bars before the next phrase.'
       return {
         target,
         endsAt: target + 8 * bl,
@@ -729,15 +796,7 @@ export function PhraseIn({ source, onDone }: DrillProps) {
           play(b.buffer, { from: barTime(b, nb) + (now - t) * rate, dur: 8 * barLen(b), at: now, rate, gain: 0.7, pan: 0.7 })
           setTimeout(() => stopAll(), 6 * bl * 1000)
         },
-        describe: (e) => {
-          if (e === null) return { verdict: 'No tap', tone: 'bad', explain: `The phrase started and B never came in. ${listen}`, tip }
-          const t = tapTier(e, bl)
-          const explain =
-            t.verdict === 'Wrong bar'
-              ? `You started B ${barsText(e, bl)}: mid-phrase, so B's changes land ${plural(Math.max(1, Math.round(Math.abs(e) / bl)), 'bar')} off A's and the structures clash. ${listen}`
-              : `B came in ${msr(e)} from A's phrase start${t.tone === 'bad' ? `, ${howFar(e, bl / 4)}` : ''}. ${listen}`
-          return { ...t, explain, tip }
-        },
+        describe: phraseDescribe(bl, a.source === 'builtin'),
       }
     },
   })
@@ -745,6 +804,7 @@ export function PhraseIn({ source, onDone }: DrillProps) {
     <OneTapRounds
       rounds={4}
       make={make}
+      sizer={() => phraseDescribe(NOMINAL_BAR, source.kind === 'builtin')}
       onDone={onDone}
       intro="Track A starts somewhere inside a phrase. Count and press on the 1 of the next 8-bar phrase to start track B."
       label="Start B"
@@ -866,56 +926,85 @@ export function TapTempo({ source, onDone }: DrillProps) {
     finish(o)
   }
 
+  /** The playing deck; the other phases lay it out invisibly so every phase takes the same room. */
+  const deck = (on: boolean) => {
+    const n = on ? taps.length : 0
+    return (
+      <div className="deck">
+        <div className="deck-main">
+          <TapPad onPointerDown={onPad} label="Tap every beat" flash={n} />
+          <Readout
+            items={{
+              Round: `${i + 1} / ${ROUNDS}`,
+              Taps: <Value v={n} />,
+              Estimate: <Value v={on && guess !== null ? guess.toFixed(1) : '—'} />,
+            }}
+          />
+        </div>
+        <div className="row">
+          <button
+            onClick={(e) => {
+              e.currentTarget.blur()
+              setTaps([])
+            }}
+            disabled={!n}
+          >
+            Reset
+          </button>
+          <button className="primary" onClick={submit} disabled={n < TT_MIN}>
+            {/* both labels share one slot, so Reset beside it stays put */}
+            <Reserve
+              inline
+              shape={[
+                `Tap ${TT_MIN} more`,
+                <>
+                  Lock in <kbd>↵</kbd>
+                </>,
+              ]}
+            >
+              {n < TT_MIN ? (
+                `Tap ${TT_MIN - n} more`
+              ) : (
+                <>
+                  Lock in <kbd>↵</kbd>
+                </>
+              )}
+            </Reserve>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="center">
-      <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase}`}>
+      <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase}`} hold className="phase-body">
         {phase === 'playing' ? (
-          <div className="deck">
-            <div className="deck-main">
-              <TapPad onPointerDown={onPad} label="Tap every beat" flash={taps.length} />
-              <Readout
-                items={{
-                  Round: `${i + 1} / ${ROUNDS}`,
-                  Taps: <Value v={taps.length} />,
-                  Estimate: <Value v={guess !== null ? guess.toFixed(1) : '—'} />,
-                }}
-              />
-            </div>
-            <div className="row">
-              <button
-                onClick={(e) => {
-                  e.currentTarget.blur()
-                  setTaps([])
-                }}
-                disabled={!taps.length}
-              >
-                Reset
-              </button>
-              <button className="primary" onClick={submit} disabled={taps.length < TT_MIN}>
-                {taps.length < TT_MIN ? `Tap ${TT_MIN - taps.length} more` : 'Lock in'} {taps.length >= TT_MIN && <kbd>↵</kbd>}
-              </button>
-            </div>
-          </div>
-        ) : phase === 'result' && desc ? (
-          <>
-            <Verdict d={desc.d} pts={desc.pts} />
-            <button className="primary" onClick={() => finish()} autoFocus>
-              {i + 1 >= ROUNDS ? 'Finish' : 'Next round'}
-            </button>
-          </>
+          deck(true)
         ) : (
-          <>
-            <p className="muted small">
-              Round {i + 1} of {ROUNDS} · <Value v={Math.round(total)} /> pts
-            </p>
-            <p>Tap every beat ({TT_MIN}+ taps), then lock in. The tempo is hidden and randomised; your estimate shows in the readout after 4 taps.</p>
-            <button className="primary big" onClick={begin} disabled={phase === 'loading'}>
-              {phase === 'loading' ? 'Loading…' : 'Play'}
-            </button>
-          </>
+          <Reserve shape={deck(false)}>
+            {phase === 'result' && desc ? (
+              <>
+                <Verdict d={desc.d} pts={desc.pts} />
+                <button className="primary" onClick={() => finish()} autoFocus>
+                  {i + 1 >= ROUNDS ? 'Finish' : 'Next round'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="muted small">
+                  Round {i + 1} of {ROUNDS} · <Value v={Math.round(total)} /> pts
+                </p>
+                <p>Tap every beat ({TT_MIN}+ taps), then lock in. The tempo is hidden and randomised; your estimate shows in the readout after 4 taps.</p>
+                <button className="primary big" onClick={begin} disabled={phase === 'loading'}>
+                  {phase === 'loading' ? 'Loading…' : 'Play'}
+                </button>
+              </>
+            )}
+          </Reserve>
         )}
       </Swap>
-      {phase !== 'result' && <Skip onSkip={skip} last={i + 1 >= ROUNDS} />}
+      <Skip onSkip={skip} last={i + 1 >= ROUNDS} off={phase === 'result'} />
     </div>
   )
 }
@@ -1122,14 +1211,12 @@ export function TempoMatch({ source, onDone }: DrillProps) {
     finish(o)
   }
 
-  return (
-    <div className="center">
-      <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase}`}>
-        {phase === 'playing' ? (
+  /** The playing deck; the other phases lay it out invisibly so every phase takes the same room. */
+  const deck = (on: boolean) => (
           <div className="deck tempo-ui">
             <p className="muted">Deck B is off. Ride its pitch until the kicks stop drifting, nudge to line them up, then lock.</p>
             {i < TM_METER_ROUNDS && (
-              <div className="phase-meter" ref={meter}>
+              <div className="phase-meter" ref={on ? meter : undefined}>
                 <div className="phase-track" aria-hidden="true">
                   <span className="phase-centre" />
                   <span className="phase-marker" />
@@ -1176,7 +1263,16 @@ export function TempoMatch({ source, onDone }: DrillProps) {
             </div>
             <p className="muted small">Keys: ↑/↓ pitch (Shift for coarse), ←/→ hold to nudge, Enter to lock.</p>
           </div>
-        ) : phase === 'result' && desc ? (
+  )
+
+  return (
+    <div className="center">
+      <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase}`} hold className="phase-body">
+        {phase === 'playing' ? (
+          deck(true)
+        ) : (
+          <Reserve shape={deck(false)}>
+            {phase === 'result' && desc ? (
           <>
             <Verdict d={desc.d} pts={desc.pts} />
             <button className="primary" onClick={() => finish()} autoFocus>
@@ -1197,8 +1293,10 @@ export function TempoMatch({ source, onDone }: DrillProps) {
             </button>
           </>
         )}
+          </Reserve>
+        )}
       </Swap>
-      {phase !== 'result' && <Skip onSkip={skip} last={i + 1 >= ROUNDS} />}
+      <Skip onSkip={skip} last={i + 1 >= ROUNDS} off={phase === 'result'} />
     </div>
   )
 }

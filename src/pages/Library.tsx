@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ac, click, play, stopAll } from '../audio/engine'
-import { Swap } from '../components/Swap'
+import { Reserve, Swap } from '../components/Swap'
 import { RippleField } from '../components/viz/fields'
 import { DitherWave, DMeter } from '../components/viz/meters'
 import { addFiles, decodeTrack, importShared, removeTrack, setGrid, useTracks, type TrackMeta } from '../lib/library'
@@ -13,6 +13,19 @@ declare global {
 }
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+
+const busyLabel = (
+  <>
+    <strong>Analysing…</strong>
+    <span>Tempo, beat grid, phrase, key and energy. A few seconds per track.</span>
+  </>
+)
+const idleLabel = (
+  <>
+    <strong>Drop audio files here</strong>
+    <span>or click to choose. MP3, WAV, FLAC, AAC, OGG.</span>
+  </>
+)
 
 export function Library() {
   const tracks = useTracks()
@@ -65,19 +78,10 @@ export function Library() {
             <RippleField className="absolute inset-0" />
           </div>
         )}
-        <Swap k={busy ? 'busy' : 'idle'}>
-          {busy ? (
-            <>
-              <strong>Analysing…</strong>
-              <span>Tempo, beat grid, phrase, key and energy. A few seconds per track.</span>
-            </>
-          ) : (
-            <>
-              <strong>Drop audio files here</strong>
-              <span>or click to choose. MP3, WAV, FLAC, AAC, OGG.</span>
-            </>
-          )}
-        </Swap>
+        {/* the label is as big as the larger of its two texts, so it does not resize when analysis starts */}
+        <Reserve className="drop-label" shape={[busyLabel, idleLabel]}>
+          <Swap k={busy ? 'busy' : 'idle'}>{busy ? busyLabel : idleLabel}</Swap>
+        </Reserve>
         <input ref={input} type="file" accept="audio/*" multiple hidden onChange={(e) => onFiles(e.target.files)} />
       </div>
       {tracks.length === 0 && (
@@ -133,21 +137,34 @@ export function Library() {
                       </td>
                       <td className="num r">{fmt(tr.analysis.duration)}</td>
                       <td className="actions">
-                        <button className="small" aria-pressed={editing === tr.id} onClick={() => setEditing(editing === tr.id ? null : tr.id)}>
+                        <button key="grid" className="small" aria-pressed={editing === tr.id} onClick={() => setEditing(editing === tr.id ? null : tr.id)}>
                           Grid
                         </button>
-                        <button className="ghost small icon" onClick={() => void removeTrack(tr.id)} aria-label={`Remove ${tr.name}`}>
+                        <button key="remove" className="ghost small icon" onClick={() => void removeTrack(tr.id)} aria-label={`Remove ${tr.name}`}>
+                          ✕
+                        </button>
+                      </td>
+                    </>
+                  ) : tr.status === 'error' ? (
+                    <>
+                      <td colSpan={4} className="bad">
+                        Could not read: {tr.error}
+                      </td>
+                      <td className="actions">
+                        <button key="remove" className="ghost small icon" onClick={() => void removeTrack(tr.id)} aria-label={`Remove ${tr.name}`}>
                           ✕
                         </button>
                       </td>
                     </>
                   ) : (
                     <>
-                      <td colSpan={4} className={tr.status === 'error' ? 'bad' : 'muted'}>
-                        {tr.status === 'error' ? `Could not read: ${tr.error}` : 'Analysing…'}
-                      </td>
+                      {/* the same cells as a ready row, so the columns do not change when analysis finishes */}
+                      <td className="muted pending">Analysing…</td>
+                      <td className="key" />
+                      <td className="energy-col" />
+                      <td className="num" />
                       <td className="actions">
-                        <button className="ghost small icon" onClick={() => void removeTrack(tr.id)} aria-label={`Remove ${tr.name}`}>
+                        <button key="remove" className="ghost small icon" onClick={() => void removeTrack(tr.id)} aria-label={`Remove ${tr.name}`}>
                           ✕
                         </button>
                       </td>

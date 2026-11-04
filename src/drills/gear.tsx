@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Swap, Value } from '../components/Swap'
+import { Reserve, Swap, Value } from '../components/Swap'
 import type { DrillProps, RunDetail } from './common'
 import './gear.css'
 
@@ -202,6 +202,24 @@ export function GearLab({ onDone, onQuiz }: DrillProps & { onQuiz?: () => void }
     activate,
   }
 
+  const about = (k: string) => (
+    <div>
+      <p className="eyebrow">{KIND[k].where}</p>
+      <h2>{KIND[k].name}</h2>
+      <p>{KIND[k].does}</p>
+      <p className="muted">{KIND[k].tip}</p>
+      <p className="muted small gear-hint">Esc to close</p>
+    </div>
+  )
+  const intro = (
+    <div>
+      <p className="eyebrow">Explore</p>
+      <h2>Pick a part</h2>
+      <p className="muted">Click or tap any control, or Tab to it and press Enter, to see what it does and how it helps a mix.</p>
+      {narrow && <p className="muted small">Deck 2 has the same controls as deck 1, so on a small screen only deck 1 is drawn.</p>}
+    </div>
+  )
+
   const W = narrow ? 664 : 1000
   const H = 560
 
@@ -245,27 +263,13 @@ export function GearLab({ onDone, onQuiz }: DrillProps & { onQuiz?: () => void }
 
         {mode === 'explore' && (
           <aside className="gear-card card" aria-live="polite">
-            <Swap k={selKind ?? 'none'}>
-              {selKind ? (
-                <div>
-                  <p className="eyebrow">{KIND[selKind].where}</p>
-                  <h2>{KIND[selKind].name}</h2>
-                  <p>{KIND[selKind].does}</p>
-                  <p className="muted">{KIND[selKind].tip}</p>
-                  <p className="muted small gear-hint">Esc to close</p>
-                </div>
-              ) : (
-                <div>
-                  <p className="eyebrow">Explore</p>
-                  <h2>Pick a part</h2>
-                  <p className="muted">Click or tap any control, or Tab to it and press Enter, to see what it does and how it helps a mix.</p>
-                  {narrow && <p className="muted small">Deck 2 has the same controls as deck 1, so on a small screen only deck 1 is drawn.</p>}
-                </div>
-              )}
-            </Swap>
+            {/* room for the longest explanation, so picking a part never moves Start quiz */}
+            <Reserve className="gear-text" shape={[intro, ...KINDS.map((k) => about(k.id))]}>
+              <Swap k={selKind ?? 'none'}>{selKind ? about(selKind) : intro}</Swap>
+            </Reserve>
             <div className="gear-foot">
               <span className="muted small tabular">
-                <Value v={explored.length} /> of {KINDS.length} explored
+                <Value v={explored.length} w={2} /> of {KINDS.length} explored
               </span>
               <button className="primary" onClick={onQuiz ?? startQuiz}>
                 Start quiz

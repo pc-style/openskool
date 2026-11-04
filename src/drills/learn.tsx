@@ -1,6 +1,6 @@
 // Learn steps for the knowledge drills: short, interactive lessons shown before each quiz.
 import { useEffect, useMemo, useState } from 'react'
-import { Swap, Value } from '../components/Swap'
+import { Reserve, Swap, Value } from '../components/Swap'
 import { CamelotWheel, type CamelotMark } from '../components/viz/diagrams'
 import { shuffle } from '../lib/clips'
 import { ROUTINES } from '../lib/signal'
@@ -196,11 +196,32 @@ const TRIES: Try[] = [
   { prompt: 'Click a safe neighbour of 1B.', ok: (x) => compatible('1B').slice(1).includes(x), why: 'From 1B: 12B, 2B or 1A. The wheel wraps round.' },
 ]
 
+/** Every key, to size the answer line for whichever one is clicked. */
+const ALL_KEYS = Array.from({ length: 12 }, (_, k) => [`${k + 1}A`, `${k + 1}B`]).flat()
+
 function CamelotTry({ onQuiz }: LearnProps) {
   const [i, setI] = useState(0)
   const [pick, setPick] = useState<{ code: string; ok: boolean } | null>(null)
   const done = i >= TRIES.length
   const t = TRIES[Math.min(i, TRIES.length - 1)]
+  const feedback = (p: { code: string; ok: boolean }) => (
+    <>
+      <p className="small">
+        <span className={p.ok ? 'cam-yes' : 'note-bad'}>{p.ok ? `Yes, ${p.code}.` : `${p.code} is not it.`}</span> <span className="muted">{p.ok ? t.why : `${p.code} is ${keyName(p.code)}. Try another key.`}</span>
+      </p>
+      {p.ok && (
+        <button
+          autoFocus={p === pick}
+          onClick={() => {
+            setI(i + 1)
+            setPick(null)
+          }}
+        >
+          Next
+        </button>
+      )}
+    </>
+  )
   const marks: CamelotMark[] = pick ? [{ code: pick.code, tone: pick.ok ? 'good' : 'bad' }] : []
   return (
     <div className="cam-cols">
@@ -231,22 +252,8 @@ function CamelotTry({ onQuiz }: LearnProps) {
                 {i + 1} of {TRIES.length}
               </p>
               <p className="learn-lead">{t.prompt}</p>
-              {pick && (
-                <p className="small">
-                  <span className={pick.ok ? 'cam-yes' : 'note-bad'}>{pick.ok ? `Yes, ${pick.code}.` : `${pick.code} is not it.`}</span> <span className="muted">{pick.ok ? t.why : `${pick.code} is ${keyName(pick.code)}. Try another key.`}</span>
-                </p>
-              )}
-              {pick?.ok && (
-                <button
-                  autoFocus
-                  onClick={() => {
-                    setI(i + 1)
-                    setPick(null)
-                  }}
-                >
-                  Next
-                </button>
-              )}
+              {/* room for the longest answer line and Next, so the panel keeps its size and place */}
+              <Reserve shape={[...ALL_KEYS.map((c) => feedback({ code: c, ok: false })), feedback({ code: '12B', ok: true })]}>{pick && feedback(pick)}</Reserve>
             </>
           )}
         </Swap>
@@ -285,13 +292,13 @@ export function CamelotLearn({ onQuiz }: LearnProps) {
         </button>
       </div>
 
-      <Swap k={mode}>
+      <Swap k={mode} hold>
         {mode === 'explore' ? (
           <div className="cam-cols">
             <CamelotWheel start={sel} onSelect={setSel} highlight={[{ code: boost, tone: 'boost' }]} />
             <div className="cam-panel" aria-live="polite">
               <p className="muted small">Click any key.</p>
-              <Swap k={sel}>
+              <Swap k={sel} hold>
                 <p className="learn-lead">
                   {sel} · {keyName(sel)}
                 </p>
@@ -348,12 +355,19 @@ function SignalTry({ r, onNext }: { r: number; onNext?: () => void }) {
   return (
     <div className="sig-try">
       <p className="muted small">Click the steps in order. A right pick locks in.</p>
+      {/* every step has its row from the start, and a placed chip leaves its slot: nothing below moves */}
       <ol className="sig-chain">
-        {steps.slice(0, done).map((s) => (
-          <li key={s} className="fade-in">
-            {s}
-          </li>
-        ))}
+        {steps.map((s, k) =>
+          k < done ? (
+            <li key={s} className="fade-in">
+              {s}
+            </li>
+          ) : (
+            <li key={s} className="invisible" aria-hidden="true">
+              {s}
+            </li>
+          ),
+        )}
       </ol>
       {complete ? (
         <div className="row fade-in" role="status">
@@ -363,13 +377,17 @@ function SignalTry({ r, onNext }: { r: number; onNext?: () => void }) {
       ) : (
         <>
           <div className="sig-pool">
-            {pool
-              .filter((s) => !steps.slice(0, done).includes(s))
-              .map((s) => (
+            {pool.map((s) =>
+              steps.slice(0, done).includes(s) ? (
+                <button key={s} className="sig-chip invisible" aria-hidden="true" tabIndex={-1} disabled>
+                  {s}
+                </button>
+              ) : (
                 <button key={s} className={`sig-chip${wrong === s ? ' is-wrong' : ''}${hint && s === steps[done] ? ' is-hint' : ''}`} onClick={() => choose(s)}>
                   {s}
                 </button>
-              ))}
+              ),
+            )}
           </div>
           <div className="row">
             <button className="ghost small" onClick={() => setHint(true)} disabled={hint}>
@@ -420,21 +438,35 @@ export function SignalLearn({ onQuiz }: LearnProps) {
         ))}
       </div>
 
-      <Swap k={`${r}-${trying}`}>
+      <Swap k={`${r}-${trying}`} hold>
         <p className="learn-lead">{routine.title}</p>
         <p className="muted">{routine.about}</p>
         {trying ? (
           <SignalTry r={r} onNext={next} />
         ) : (
           <>
-            <ol className="sig-chain">
-              {routine.steps.slice(0, i + 1).map((s, k) => (
-                <li key={s.step} className={k === i ? 'is-new fade-in' : undefined}>
-                  <span className="sig-step">{s.step}</span>
-                  {k === i && <span className="sig-why muted small">{s.why}</span>}
-                </li>
+            {/* room for the whole routine with its longest note, so Next step does not move the buttons */}
+            <Reserve
+              shape={routine.steps.map((_, j) => (
+                <ol key={j} className="sig-chain">
+                  {routine.steps.map((s, k) => (
+                    <li key={s.step}>
+                      <span className="sig-step">{s.step}</span>
+                      {k === j && <span className="sig-why muted small">{s.why}</span>}
+                    </li>
+                  ))}
+                </ol>
               ))}
-            </ol>
+            >
+              <ol className="sig-chain">
+                {routine.steps.slice(0, i + 1).map((s, k) => (
+                  <li key={s.step} className={k === i ? 'is-new fade-in' : undefined}>
+                    <span className="sig-step">{s.step}</span>
+                    {k === i && <span className="sig-why muted small">{s.why}</span>}
+                  </li>
+                ))}
+              </ol>
+            </Reserve>
             <div className="row sig-nav">
               <button onClick={() => setI(i - 1)} disabled={i === 0}>
                 Back
@@ -528,6 +560,30 @@ export function SetLearn({ onQuiz }: LearnProps) {
   const best = useMemo(() => scoreSet(CRATE).best, [])
   const [a, b] = sel
   const click = (t: SetTrack) => setSel(sel.length === 1 && t !== a ? [a, t] : [t])
+  const bestOrder = (
+    <>
+      <p className="small">The best order for this crate:</p>
+      <ol className="learn-best small">
+        {best.map((t, k) => (
+          <li key={t.name}>
+            {t.name} <span className="muted tabular">{t.camelot} · {t.bpm}</span>
+            {k > 0 && (
+              <span className="muted">
+                {' '}
+                ·{' '}
+                {transitionNote(best[k - 1], t).map((p, j) => (
+                  <span key={p.text} className={p.bad ? 'note-bad' : undefined}>
+                    {j > 0 && ', '}
+                    {p.text}
+                  </span>
+                ))}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </>
+  )
   return (
     <div className="learn">
       <ol className="learn-rules">
@@ -562,7 +618,7 @@ export function SetLearn({ onQuiz }: LearnProps) {
           })}
         </ul>
         <div aria-live="polite">
-          <Swap k={sel.map((t) => t.name).join('>')}>
+          <Swap k={sel.map((t) => t.name).join('>')} hold>
             {a && b ? (
               <div className="learn-check">
                 <p className="small">
@@ -597,32 +653,8 @@ export function SetLearn({ onQuiz }: LearnProps) {
         <p className="muted">
           You get six tracks with the calmest as a fixed opener. Your order is compared with every other order from that opener: the best scores 1000 and the worst 0, curved so that nearly best still scores well. Red notes are what cost points: key clashes, tempo jumps over {TEMPO_OK} % and energy drops.
         </p>
-        {showBest ? (
-          <div className="fade-in">
-            <p className="small">The best order for this crate:</p>
-            <ol className="learn-best small">
-              {best.map((t, k) => (
-                <li key={t.name}>
-                  {t.name} <span className="muted tabular">{t.camelot} · {t.bpm}</span>
-                  {k > 0 && (
-                    <span className="muted">
-                      {' '}
-                      ·{' '}
-                      {transitionNote(best[k - 1], t).map((p, j) => (
-                        <span key={p.text} className={p.bad ? 'note-bad' : undefined}>
-                          {j > 0 && ', '}
-                          {p.text}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </div>
-        ) : (
-          <button onClick={() => setShowBest(true)}>Show the best order for this crate</button>
-        )}
+        {/* the list's room is kept under the button, so revealing it does not push the page down */}
+        <Reserve shape={bestOrder}>{showBest ? <div className="fade-in">{bestOrder}</div> : <button onClick={() => setShowBest(true)}>Show the best order for this crate</button>}</Reserve>
       </section>
 
       <QuizFoot onQuiz={onQuiz} note="Three crates. Tap the tracks in the order you would play them." />

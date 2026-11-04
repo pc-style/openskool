@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ac } from '../audio/engine'
-import { Swap } from '../components/Swap'
+import { Reserve, Swap } from '../components/Swap'
 import { Scope } from '../components/viz/fields'
 import { DMeter, ScoreRing } from '../components/viz/meters'
 import { GENRES, type Genre } from '../audio/synth'
@@ -112,7 +112,14 @@ function Drill({ id }: { id: string }) {
     if (!worlds) return undefined
     return xpNow >= w.xp ? `${w.mult}× XP` : `Recommended from ${w.xp.toLocaleString()} XP (you have ${xpNow.toLocaleString()}). Open to try any time, ${w.mult}× XP.`
   }
-  const aheadOfYou = kind === 'builtin' && worlds && worldAt(xpNow).index < WORLDS.findIndex((w) => w.genre === genre)
+  const isAhead = (g: Genre) => worlds && worldAt(xpNow).index < WORLDS.findIndex((w) => w.genre === g)
+  const aheadOfYou = kind === 'builtin' && isAhead(genre)
+  const aheadGenres = picker ? (Object.keys(GENRES) as Genre[]).filter(isAhead) : []
+  const advisory = (g: Genre) => (
+    <p className="muted small">
+      {GENRES[g].name} {GENRES[g].bpm} is ahead of where you are: it is recommended from {WORLDS.find((w) => w.genre === g)!.xp.toLocaleString()} XP. Faster tempos leave less room for error, so expect lower scores at first.
+    </p>
+  )
   const overall = best(s, meta.id)
   const sourceName = kind === 'mine' ? 'your tracks' : GENRES[genre].name
   const daily = isDailyRun(s, meta.id)
@@ -250,12 +257,8 @@ function Drill({ id }: { id: string }) {
               <p className="muted small">You have one track, so deck B will be a contrasting built-in groove played at your track's tempo.</p>
             )}
             {meta.needs && kind === 'mine' && <p className="muted small">{meta.needs}</p>}
-            {aheadOfYou && (
-              <p className="muted small">
-                {GENRES[genre].name} {GENRES[genre].bpm} is ahead of where you are: it is recommended from {WORLDS.find((w) => w.genre === genre)!.xp.toLocaleString()} XP. Faster tempos leave less room for error, so expect lower
-                scores at first.
-              </p>
-            )}
+            {/* while any world is ahead of you, its note keeps its room, so switching worlds does not move Start */}
+            {aheadGenres.length > 0 && <Reserve className="advisory" shape={aheadGenres.map(advisory)}>{aheadOfYou && advisory(genre)}</Reserve>}
             <div className="row start-row">
               {Learn ? (
                 <>

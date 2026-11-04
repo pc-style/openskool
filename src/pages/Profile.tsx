@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { ac, click, stopAll } from '../audio/engine'
 import { rateTap, TapPad, useTaps, type TapRating } from '../drills/common'
-import { Swap, Value } from '../components/Swap'
+import { Reserve, Swap, Value } from '../components/Swap'
 import { DitherSpark, DMeter } from '../components/viz/meters'
 import { badges } from '../lib/coach'
 import { missionsDone } from '../lib/course'
@@ -227,6 +227,8 @@ export function Profile() {
   )
 }
 
+const NO_TAPS = 'Not enough steady taps. Try again and tap every click.'
+
 function Calibrate() {
   const s = useProgress()
   const [running, setRunning] = useState(false)
@@ -259,7 +261,7 @@ function Calibrate() {
       .filter((d) => Math.abs(d) < 0.2)
       .sort((a, b) => a - b)
     if (devs.length < 8) {
-      setMsg('Not enough steady taps. Try again and tap every click.')
+      setMsg(NO_TAPS)
       return
     }
     const med = devs[Math.floor(devs.length / 2)]
@@ -283,13 +285,19 @@ function Calibrate() {
           </span>
           .
         </p>
-        {msg && <p className="calib-msg fade-in">{msg}</p>}
+        {/* the message's line is kept, so it appears without pushing the settings below */}
+        <Reserve shape={[NO_TAPS, 'Saved: your taps land 100 ms early on this device. Timing drills now correct for it.'].map((m) => <p key={m} className="calib-msg">{m}</p>)}>
+          {msg && <p className="calib-msg fade-in">{msg}</p>}
+        </Reserve>
       </div>
+      {/* the button keeps the pad's room, so starting does not grow the row */}
       <Swap k={running ? 'run' : 'idle'} className="calib-action">
         {running ? (
           <TapPad onPointerDown={onPad} label="Tap each click" flash={flash} rating={rating} />
         ) : (
-          <button onClick={start}>{s.settings.latencyMs ? 'Recalibrate' : 'Calibrate'}</button>
+          <Reserve shape={<TapPad onPointerDown={() => {}} label="Tap each click" flash={0} />}>
+            <button onClick={start}>{s.settings.latencyMs ? 'Recalibrate' : 'Calibrate'}</button>
+          </Reserve>
         )}
       </Swap>
     </div>

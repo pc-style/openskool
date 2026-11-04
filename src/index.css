@@ -616,6 +616,20 @@ a.list-row:hover {
 .fade-in {
   animation: swap-in var(--dur) var(--ease);
 }
+/* Reserve: the live content and its invisible shapes share one grid cell */
+.reserve {
+  display: grid;
+}
+.reserve.inline {
+  display: inline-grid;
+}
+.reserve > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+.reserve > .reserve-shape {
+  visibility: hidden;
+}
 
 /* ---------- today ---------- */
 
@@ -1204,7 +1218,7 @@ a.list-row:hover {
   overflow: hidden;
   transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
 }
-.drop > .swap {
+.drop > .drop-label {
   position: relative;
   /* the label keeps clear ground over the ripple */
   background: inherit;
@@ -1232,6 +1246,20 @@ a.list-row:hover {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.93rem;
+  /* fixed columns: analysis finishing or a "Grid edited" tag never redistributes them */
+  table-layout: fixed;
+}
+.tracks th:nth-child(2) {
+  width: 72px;
+}
+.tracks th:nth-child(3) {
+  width: 150px;
+}
+.tracks th:nth-child(5) {
+  width: 64px;
+}
+.tracks th:nth-child(6) {
+  width: 92px;
 }
 .tracks th {
   text-align: left;
@@ -1257,6 +1285,11 @@ a.list-row:hover {
 }
 .tracks .r {
   text-align: right;
+}
+/* "Analysing…" runs on over the empty cells beside it */
+.tracks td.pending {
+  overflow: visible;
+  white-space: nowrap;
 }
 .tracks tr.editing td {
   border-bottom-color: var(--ring);
@@ -1846,6 +1879,10 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
 .calib-action .tappad {
   width: min(280px, 100%);
 }
+.calib-action .reserve-live {
+  display: grid;
+  place-items: center end;
+}
 .history {
   padding: 0 16px;
 }
@@ -2047,6 +2084,9 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
   }
   .calib-action {
     justify-self: start;
+  }
+  .calib-action .reserve-live {
+    place-items: start;
   }
   .setting input:not([type]) {
     width: 100%;

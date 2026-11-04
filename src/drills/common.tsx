@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Swap, Value } from '../components/Swap'
+import { Reserve, Swap, Value } from '../components/Swap'
 import { heardTime, stopAll } from '../audio/engine'
 import './timing.css'
 import './choice.css'
@@ -59,6 +59,9 @@ export interface RoundTiming {
   /** Audio-context time the round's audio ends; the beat strip goes dark after it. */
   end?: number
 }
+
+/** Timing for a beat strip that is only laid out, never shown. */
+const STILL_TIMING: RoundTiming = { start: 0, bpm: 120 }
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
 export { clamp }
@@ -235,28 +238,52 @@ export function ChoiceDrill({
   }, [round, choose, next, skip, begin])
 
   const answerLabel = round?.options.find((o) => o.id === round.answer)?.label
+  const nw = timed ? 2 : String(rounds).length
+
+  /** The answer's feedback. Both versions are laid out invisibly before the answer, so answering does not grow the drill. */
+  const feedback = (r: ChoiceRound, ok: boolean, live = false) => (
+    <div className={live ? 'feedback fade-in' : 'feedback'} role={live ? 'status' : undefined}>
+      <p>
+        <strong className={ok ? 'good' : 'bad'}>{ok ? 'Correct. ' : 'Not quite. '}</strong>
+        {r.explain}
+      </p>
+      {r.tip && <p className="tip">{r.tip}</p>}
+      {r.visual}
+    </div>
+  )
+  const skipButton = (
+    <button className="ghost" onClick={skip}>
+      Skip <kbd>S</kbd>
+    </button>
+  )
+  const nextLabel = (
+    <>
+      {i + 1 >= rounds ? 'Finish' : 'Next'} <kbd>↵</kbd>
+    </>
+  )
 
   return (
     <div className="choice">
       <div className="drill-meta">
         {timed ? (
-          <span className={left <= 10 ? 'hot' : ''}>{Math.max(0, left)} s left</span>
+          <span className={left <= 10 ? 'hot' : ''}>
+            <Value v={Math.max(0, left)} w={2} /> s left
+          </span>
         ) : (
           <span>
-            Round <Value v={Math.min(i + 1, rounds)} /> of {rounds}
+            Round <Value v={Math.min(i + 1, rounds)} w={nw} /> of {rounds}
           </span>
         )}
         <span>
-          <Value v={right} /> right · <Value v={wrong} /> wrong
-          {streak >= 2 && (
-            <>
-              {' '}
-              · streak <Value v={streak} />
-            </>
-          )}
+          <Value v={right} w={nw} /> right · <Value v={wrong} w={nw} /> wrong
+          {/* the streak keeps its place while hidden, so the counts beside it stay put */}
+          <span className={streak >= 2 ? undefined : 'invisible'} aria-hidden={streak < 2 || undefined}>
+            {' '}
+            · streak <Value v={streak} w={nw} />
+          </span>
         </span>
       </div>
-      <Swap k={round ? `r${i}` : `l${i}`}>
+      <Swap k={round ? `r${i}` : `l${i}`} hold>
       {!round ? (
         <div className="loading">Preparing audio…</div>
       ) : (
@@ -264,10 +291,11 @@ export function ChoiceDrill({
           {round.header}
           <h2 className="prompt">{round.prompt}</h2>
           {round.sub && <p className="sub">{round.sub}</p>}
-          {timing && <BarCounter timing={timing} cells={4} />}
-          {timing?.enableAt !== undefined && (
-            <Swap k={locked && !picked ? 'locked' : 'open'} className="lockline">
-              {locked && !picked ? <span role="status">{lockLine(timing)}</span> : <span>&nbsp;</span>}
+          {/* the beat strip and lock line keep their room while the audio starts, so the options do not drop */}
+          {round.play && (timing ? <BarCounter timing={timing} cells={4} /> : <Reserve shape={<BarCounter timing={STILL_TIMING} cells={4} still />} />)}
+          {round.play && (
+            <Swap k={locked && !picked && timing ? 'locked' : 'open'} className="lockline">
+              {locked && !picked && timing ? <span role="status">{lockLine(timing)}</span> : <span>&nbsp;</span>}
             </Swap>
           )}
           <div className={`options n${round.options.length} ${locked && !picked ? 'locked' : ''}`}>
@@ -290,31 +318,25 @@ export function ChoiceDrill({
                 ↻ Replay <kbd>Space</kbd>
               </button>
             )}
-            {!picked && (
-              <button className="ghost" onClick={skip}>
-                Skip <kbd>S</kbd>
-              </button>
-            )}
-            {picked && !timed && (
-              <button className="primary" onClick={next} autoFocus>
-                {i + 1 >= rounds ? 'Finish' : 'Next'} <kbd>↵</kbd>
-              </button>
-            )}
+            {/* Skip and Next take turns in one slot as wide as the wider of them */}
+            <Reserve inline shape={timed ? skipButton : [skipButton, <button key="next" className="primary">{nextLabel}</button>]}>
+              {!picked && skipButton}
+              {picked && !timed && (
+                <button className="primary" onClick={next} autoFocus>
+                  {nextLabel}
+                </button>
+              )}
+            </Reserve>
           </div>
-          {picked && timed && picked !== round.answer && (
+          {timed && (
             <p className="timed-answer" role="status">
-              Answer: {answerLabel}
+              {picked && picked !== round.answer ? <>Answer: {answerLabel}</> : '\u00a0'}
             </p>
           )}
-          {picked && !timed && (
-            <div className="feedback fade-in" role="status">
-              <p>
-                <strong className={picked === round.answer ? 'good' : 'bad'}>{picked === round.answer ? 'Correct. ' : 'Not quite. '}</strong>
-                {round.explain}
-              </p>
-              {round.tip && <p className="tip">{round.tip}</p>}
-              {round.visual}
-            </div>
+          {!timed && (
+            <Reserve shape={[feedback(round, true), feedback(round, false)]}>
+              {picked && feedback(round, picked === round.answer, true)}
+            </Reserve>
           )}
         </>
       )}

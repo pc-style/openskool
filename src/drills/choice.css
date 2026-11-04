@@ -95,3 +95,7 @@
   font-size: 0.68rem;
   min-height: 1.2em;
 }
+/* Skip and Next share one slot; whichever shows sits in its middle */
+.choice .row > .reserve {
+  text-align: center;
+}

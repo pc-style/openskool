@@ -104,6 +104,15 @@
   padding: 0;
   margin: 0;
 }
+/* over the emptied crate's slots */
+.setbuilder section {
+  position: relative;
+}
+.sb-empty {
+  position: absolute;
+  inset: 40px 0 auto;
+  margin: 0;
+}
 button.set-row {
   width: 100%;
   box-shadow: none;
@@ -179,4 +188,14 @@ button.set-row:hover:not(:disabled) {
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+/* the routine and its reserved slots span the column */
+.signal > .swap {
+  align-self: stretch;
+}
+.signal > .swap > div > .reserve {
+  width: 100%;
+}
+.signal .reserve .order {
+  margin-inline: auto;
 }
