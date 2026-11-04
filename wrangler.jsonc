@@ -1,0 +1,12 @@
+{
+  // Static site on Cloudflare Workers (static assets). Cloudflare Workers Builds deploys it on pushes to main.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "openskool",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    // /library is the share-target and file-handler path; the app redirects it to /#/library
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "openskool.pcstyle.dev", "custom_domain": true }]
+}
