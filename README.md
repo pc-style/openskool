@@ -56,14 +56,14 @@ reproduce the bass that EQ Detective and Bass Clash depend on.
 
 ## Run it
 
-Requires Node 20.19+ or 22.12+.
+Requires [Bun](https://bun.sh) 1.4 or newer.
 
 ```sh
-npm install
-npm run dev     # http://localhost:5173
-npm test        # analysis, coach and XP tests
-npm run lint
-npm run build   # static site in dist/
+bun install
+bun run dev     # http://localhost:5173
+bun run test    # analysis, coach and XP tests
+bun run lint
+bun run build   # static site in dist/
 ```
 
 The build is a static site with hash routing, so you can deploy `dist/` to any static host
@@ -90,7 +90,7 @@ by your calibration offset.
 
 ## Contributing
 
-Issues and pull requests are welcome. Run `npm test`, `npm run lint` and `npm run build` before
+Issues and pull requests are welcome. Run `bun run test`, `bun run lint` and `bun run build` before
 opening a PR. CI runs the same checks.
 
 - A drill is a React component. It receives a clip source and calls `onDone(score, detail)`.
