@@ -2,6 +2,8 @@
 
 Open-source ear training for DJs. Bring your own songs.
 
+**Try it: [openskool.pcstyle.dev](https://openskool.pcstyle.dev)**
+
 openskool is a free, local-first trainer for the skills DJ schools teach: hearing the 1, beatmatching
 by ear, phrasing, EQ, filters, loops, FX, keys and set flow. Add your own tracks and most audio
 drills run on your music. There is no account and no server: tracks and progress stay in your
@@ -66,7 +68,8 @@ bun run lint
 bun run build   # static site in dist/
 ```
 
-The build is a static site with hash routing, so you can deploy `dist/` to any static host
+The live site runs on Cloudflare Workers static assets (`wrangler.jsonc`) and deploys on every push to
+`main`. The build is a static site with hash routing, so you can deploy `dist/` to any static host
 (GitHub Pages, Netlify, Cloudflare Pages or any web server) without rewrites. The service worker
 only registers in production builds.
 
