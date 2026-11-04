@@ -157,3 +157,15 @@ export function DitherSpark({ values, label }: { values: number[]; label: string
     </div>
   )
 }
+
+/** A segmented level meter, like a channel's LED ladder: `n` cells, lit up to `value` (0–1). */
+export function SegMeter({ value, n = 6, label, live }: { value: number; n?: number; label: string; live?: boolean }) {
+  const lit = Math.round(clamp01(value) * n)
+  return (
+    <span className={live ? 'segs live' : 'segs'} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(clamp01(value) * 100)}>
+      {Array.from({ length: n }, (_, k) => (
+        <i key={k} className={k < lit ? 'on' : undefined} />
+      ))}
+    </span>
+  )
+}

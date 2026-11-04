@@ -433,3 +433,99 @@
 .train-tabs {
   margin: 4px 0 16px;
 }
+
+/* ---------- studio: Today's session table ---------- */
+.session {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+.session th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+  padding: 0 8px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.session td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.session .num-col {
+  width: 28px;
+}
+.session .score-col {
+  width: 72px;
+  text-align: right;
+}
+.session .play-col {
+  width: 72px;
+  text-align: right;
+}
+.session-name {
+  display: block;
+  font-weight: 500;
+  text-decoration: none;
+}
+.session-name:hover {
+  text-decoration: underline;
+}
+.session-why {
+  display: block;
+  margin-top: 2px;
+}
+.later {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.92rem;
+}
+.later li {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 8px;
+  padding: 6px 0;
+}
+.later a {
+  text-decoration: none;
+}
+.later a:hover {
+  text-decoration: underline;
+}
+.skill-filter {
+  margin: 4px 0 12px;
+}
+/* the sidebar carries rank and skills on desktop */
+@media (min-width: 861px) {
+  .hero-side .rankline,
+  .phone-only {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .session .num-col,
+  .session th:nth-child(4),
+  .session td:nth-child(4) {
+    display: none;
+  }
+  .session .score-col {
+    width: 48px;
+  }
+}
+
+/* Today's daily and mission sit on the page: a top hairline, no box */
+.card.lite {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding: 14px 0 6px;
+}
+a.card.lite {
+  transition: border-color 150ms var(--ease);
+}
+a.card.lite:hover {
+  border-top-color: var(--foreground);
+}

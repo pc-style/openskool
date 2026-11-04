@@ -195,3 +195,75 @@
     font-size: 0.78rem;
   }
 }
+
+/* Downbeat Tapper as a deck: bar strip on top, pad beside a readout column */
+.db-deck {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  align-self: stretch;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.db-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 168px;
+  gap: 16px;
+  align-items: stretch;
+}
+.db-main .tappad {
+  width: 100%;
+  max-width: none;
+}
+.readout {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border-left: 1px solid var(--border);
+  text-align: left;
+}
+.readout > div {
+  flex: 1;
+  padding: 8px 0 8px 14px;
+}
+.readout > div + div {
+  border-top: 1px solid var(--border);
+}
+.readout dt {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+.readout dd {
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+}
+.db-deck .grade-dots {
+  align-self: center;
+}
+@media (max-width: 560px) {
+  .db-main {
+    grid-template-columns: 1fr;
+  }
+  .readout {
+    flex-direction: row;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .readout > div {
+    padding: 8px 6px 0;
+  }
+  .readout > div + div {
+    border-top: 0;
+    border-left: 1px solid var(--border);
+  }
+}
+.db-deck .barcounter {
+  width: 100%;
+  max-width: none;
+}
+.center > .swap:has(.db-deck) {
+  align-self: stretch;
+}

@@ -19,7 +19,10 @@ export function Train() {
   }, [asked])
   const [params, setParams] = useSearchParams()
   const tab: Tab = params.get('tab') === 'knowledge' ? 'knowledge' : 'ear'
-  const inTab = DRILLS.filter((d) => (tab === 'knowledge') === (d.audio === 'none'))
+  // the sidebar's skill links filter to one skill, across both tabs
+  const skillParam = params.get('skill')
+  const skill = SKILLS.find((sk) => sk === skillParam) ?? null
+  const inTab = DRILLS.filter((d) => (skill ? d.skill === skill : (tab === 'knowledge') === (d.audio === 'none')))
   const where: Genre | 'mine' = s.settings.source === 'mine' ? 'mine' : s.settings.genre
   const xp = xpOf(s, missionsDone(s))
   const reached = worldAt(xp).index
@@ -27,7 +30,12 @@ export function Train() {
   return (
     <div>
       <h1>Train</h1>
-      <div className="seg-group train-tabs" role="tablist" aria-label="Drill type">
+      {skill && (
+        <p className="muted skill-filter">
+          Showing {skill} only · <Link to="/train">All drills</Link>
+        </p>
+      )}
+      <div className="seg-group train-tabs" role="tablist" aria-label="Drill type" hidden={!!skill}>
         {(
           [
             ['ear', 'Ear & timing'],

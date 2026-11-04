@@ -227,6 +227,7 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
   const [dots, setDots] = useState<(TapGrade | null)[]>([])
   const [stages, setStages] = useState<(DbStage | null)[]>([])
   const run = useRef<{ targets: number[]; lead: number; beat: number; taps: number[]; bpm: number }>({ targets: [], lead: 1, beat: 0.5, taps: [], bpm: 120 })
+  const [timeline, setTimeline] = useState<RoundTiming | null>(null)
   const endTimer = useRef(0)
   useEffect(() => () => clearTimeout(endTimer.current), [])
   const st = DB_STAGES[si]
@@ -250,6 +251,7 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
     const clicks = st.click === 'all' ? bars * 4 : st.click === 'lead' ? st.lead * 4 : 0
     for (let k = 0; k < clicks; k++) click(targets[0] + k * beatLen(c), k % 4 === 0, 0.3)
     run.current = { targets, lead: st.lead, beat: beatLen(c), taps: [], bpm: c.bpm }
+    setTimeline({ start: targets[0], bpm: c.bpm, end: end - from + at })
     setRating(null)
     setDots(targets.slice(st.lead).map(() => null))
     setPhase('playing')
@@ -350,13 +352,39 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
         </button>
       </div>
     )
-  else if (phase === 'playing')
+  else if (phase === 'playing') {
+    const hits = dots.filter((g) => g === 'perfect' || g === 'good').length
     content = (
-      <div className="center">
-        <TapPad onPointerDown={onPad} label="Tap the 1" flash={flash} rating={rating} />
+      <div className="db-deck">
+        {/* the bars as a strip: free bars light; on the stages without a click, the counted bars stay dark */}
+        {timeline && <BarCounter timing={timeline} cells={st.lead + st.scored} unit="bar" label="Bars" hideFrom={st.click === 'none' ? st.lead : st.lead + st.scored} />}
+        <div className="db-main">
+          <TapPad onPointerDown={onPad} label="Tap the 1" flash={flash} rating={rating} />
+          <dl className="readout mono">
+            <div>
+              <dt>Stage</dt>
+              <dd>
+                {si + 1} / {DB_STAGES.length}
+              </dd>
+            </div>
+            <div>
+              <dt>Last tap</dt>
+              <dd>
+                <Value v={rating?.err == null ? '—' : msr(rating.err)} />
+              </dd>
+            </div>
+            <div>
+              <dt>On the 1</dt>
+              <dd>
+                <Value v={hits} /> / {st.scored}
+              </dd>
+            </div>
+          </dl>
+        </div>
         <GradeDots grades={dots} pass={pass} />
       </div>
     )
+  }
   else {
     const { errs, extras } = stages[si]!
     const { bpm, beat } = run.current

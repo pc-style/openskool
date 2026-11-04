@@ -186,66 +186,142 @@ kbd {
 
 /* ---------- layout ---------- */
 
+/* desktop: a slim sidebar and one calm content column, like a DJ app's browser and main panel */
 .app {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 0 24px 48px;
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  min-height: 100vh;
 }
-.top {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  height: 56px;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--background);
-  z-index: 5;
+.main-col {
+  min-width: 0;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 40px 48px;
 }
 .brand {
   text-decoration: none;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
-.top nav {
-  display: flex;
-  gap: 2px;
-  flex: 1;
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  font-variant-numeric: tabular-nums;
 }
-.top nav a {
+.side {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 14px 18px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.side .brand {
+  padding: 0 8px;
+}
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.side-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
   text-decoration: none;
   color: var(--muted-foreground);
-  padding: 6px 10px;
-  border-radius: 6px;
   transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease);
 }
-.top nav a:hover {
+.side-nav a:hover {
   color: var(--foreground);
 }
-.top nav a.active {
+.side-nav a.active {
   color: var(--foreground);
   background: var(--secondary);
 }
-.stats {
-  display: flex;
-  gap: 6px;
-  font-size: 0.87rem;
+.side-head {
+  margin: 0 8px 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
-.stats .rank {
+.side-skills {
+  display: flex;
+  flex-direction: column;
+}
+.side-skill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  color: var(--muted-foreground);
+}
+.side-skill:hover {
   color: var(--foreground);
+  background: var(--hover);
+}
+.side-skill.active {
+  color: var(--foreground);
+  box-shadow: inset 2px 0 0 var(--lime);
+  border-radius: 0 6px 6px 0;
+}
+.side-rank {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 8px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.side-rank .segs {
+  width: 100%;
+}
+/* segmented level meter: thin LED cells */
+.segs {
+  display: inline-flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.segs i {
+  display: block;
+  width: 5px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--border);
+}
+.side-rank .segs i {
+  flex: 1;
+  height: 6px;
+}
+.segs i.on {
+  background: var(--muted-foreground);
+}
+.segs.live i.on {
+  background: var(--lime);
+}
+.top {
+  display: none;
 }
 main {
-  padding-top: 28px;
+  padding-top: 32px;
 }
 /* the phone tab bar, see the 860px breakpoint */
 .tabbar {
   display: none;
 }
 footer {
-  margin-top: 64px;
+  margin-top: 72px;
   color: var(--muted-foreground);
   font-size: 0.82rem;
   border-top: 1px solid var(--border);
@@ -260,9 +336,7 @@ footer {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
+  border-block: 1px solid var(--border);
 }
 .grid3 > * + * {
   border-left: 1px solid var(--border);
@@ -423,7 +497,7 @@ input[type='checkbox'] {
   display: block;
   position: relative;
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 8px;
   padding: 16px 18px;
   text-decoration: none;
@@ -446,10 +520,9 @@ a.card:hover {
 .cta {
   font-weight: 500;
 }
+/* lists are rows between hairlines, not boxes */
 .list {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
+  border-block: 1px solid var(--border);
 }
 .list > * + * {
   border-top: 1px solid var(--border);
@@ -459,7 +532,9 @@ a.card:hover {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px 8px;
+  margin: 0 -8px;
+  border-radius: 6px;
   text-decoration: none;
   transition: background-color 150ms var(--ease);
 }
@@ -694,12 +769,11 @@ a.list-row:hover {
   color: var(--muted-foreground);
   font-size: 0.9rem;
 }
+/* the drill sits on the page, under one hairline */
 .stage {
   position: relative;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 24px;
+  border-top: 1px solid var(--border);
+  padding: 24px 0 0;
   min-height: 380px;
 }
 .scope {
@@ -1804,19 +1878,34 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
 
 @media (max-width: 860px) {
   .app {
+    display: block;
     /* clear of the tab bar (57px) and the home indicator */
     padding: 0 max(16px, env(safe-area-inset-right)) calc(97px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
-  .top {
-    flex-wrap: wrap;
-    height: auto;
-    min-height: 52px;
-    padding: 10px 0;
-    gap: 4px 16px;
-    justify-content: space-between;
-  }
-  .top nav {
+  .side {
     display: none;
+  }
+  .main-col {
+    padding: 0;
+  }
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+  }
+  .top .stats {
+    font-size: 0.82rem;
+    color: var(--muted-foreground);
+  }
+  .top .rank {
+    color: var(--foreground);
   }
   .tabbar {
     display: grid;
