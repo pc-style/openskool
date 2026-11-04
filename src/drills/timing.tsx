@@ -218,6 +218,20 @@ interface DbStage {
   /** Credit for the stage, 0 to `scored` bars. */
   pts: number
 }
+/** The deck's readout column: label over a mono value, one per row. */
+function Readout({ items }: { items: Record<string, React.ReactNode> }) {
+  return (
+    <dl className="readout mono">
+      {Object.entries(items).map(([k, v]) => (
+        <div key={k}>
+          <dt>{k}</dt>
+          <dd>{v}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 export function DownbeatTapper({ source, onDone }: DrillProps) {
   useUnmountStop()
   const [si, setSi] = useState(0)
@@ -355,31 +369,22 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
   else if (phase === 'playing') {
     const hits = dots.filter((g) => g === 'perfect' || g === 'good').length
     content = (
-      <div className="db-deck">
+      <div className="deck">
         {/* the bars as a strip: free bars light; on the stages without a click, the counted bars stay dark */}
         {timeline && <BarCounter timing={timeline} cells={st.lead + st.scored} unit="bar" label="Bars" hideFrom={st.click === 'none' ? st.lead : st.lead + st.scored} />}
-        <div className="db-main">
+        <div className="deck-main">
           <TapPad onPointerDown={onPad} label="Tap the 1" flash={flash} rating={rating} />
-          <dl className="readout mono">
-            <div>
-              <dt>Stage</dt>
-              <dd>
-                {si + 1} / {DB_STAGES.length}
-              </dd>
-            </div>
-            <div>
-              <dt>Last tap</dt>
-              <dd>
-                <Value v={rating?.err == null ? '—' : msr(rating.err)} />
-              </dd>
-            </div>
-            <div>
-              <dt>On the 1</dt>
-              <dd>
-                <Value v={hits} /> / {st.scored}
-              </dd>
-            </div>
-          </dl>
+          <Readout
+            items={{
+              Stage: `${si + 1} / ${DB_STAGES.length}`,
+              'Last tap': <Value v={rating?.err == null ? '—' : msr(rating.err)} />,
+              'On the 1': (
+                <>
+                  <Value v={hits} /> / {st.scored}
+                </>
+              ),
+            }}
+          />
         </div>
         <GradeDots grades={dots} pass={pass} />
       </div>
@@ -558,22 +563,24 @@ function OneTapRounds({
   }
 
   const last = i + 1 >= rounds
+  const lastErr = phase === 'result' ? errs[errs.length - 1] : undefined
   return (
     <div className="center">
-      <div className="drill-meta">
-        <span>
-          Round <Value v={i + 1} /> of {rounds}
-        </span>
-        <span>
-          <Value v={Math.round(total)} /> pts
-        </span>
-      </div>
       {/* the pad stays put after the tap so its rating dissolves in place */}
       <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase === 'result' ? 'playing' : phase}`}>
         {phase === 'playing' || phase === 'result' ? (
-          <>
+          <div className="deck">
             {counter && <BarCounter unit="bar" {...counter} />}
-            <TapPad onPointerDown={onPad} label={live || phase === 'result' || !waitLabel ? label : waitLabel} flash={flash} rating={rating} disabled={!live} />
+            <div className="deck-main">
+              <TapPad onPointerDown={onPad} label={live || phase === 'result' || !waitLabel ? label : waitLabel} flash={flash} rating={rating} disabled={!live} />
+              <Readout
+                items={{
+                  Round: `${i + 1} / ${rounds}`,
+                  Tap: <Value v={lastErr === undefined ? '—' : lastErr === null ? 'none' : msr(lastErr)} />,
+                  Points: <Value v={Math.round(total)} />,
+                }}
+              />
+            </div>
             {phase === 'result' && desc && (
               <div className="fade-in center">
                 <Verdict d={desc.d} pts={desc.pts} />
@@ -584,9 +591,12 @@ function OneTapRounds({
                 </button>
               </div>
             )}
-          </>
+          </div>
         ) : (
           <>
+            <p className="muted small">
+              Round {i + 1} of {rounds} · <Value v={Math.round(total)} /> pts
+            </p>
             <p>{intro}</p>
             <button className="primary big" onClick={begin} disabled={phase === 'loading'}>
               {phase === 'loading' ? 'Loading…' : 'Play'}
@@ -858,21 +868,19 @@ export function TapTempo({ source, onDone }: DrillProps) {
 
   return (
     <div className="center">
-      <div className="drill-meta">
-        <span>
-          Round <Value v={i + 1} /> of {ROUNDS}
-        </span>
-        <span>
-          <Value v={Math.round(total)} /> pts
-        </span>
-      </div>
       <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase}`}>
         {phase === 'playing' ? (
-          <>
-            <TapPad onPointerDown={onPad} label={guess !== null ? `${guess.toFixed(1)} BPM` : `${taps.length} taps`} flash={taps.length} />
-            <p className="muted small tt-count">
-              <Value v={taps.length} /> taps
-            </p>
+          <div className="deck">
+            <div className="deck-main">
+              <TapPad onPointerDown={onPad} label="Tap every beat" flash={taps.length} />
+              <Readout
+                items={{
+                  Round: `${i + 1} / ${ROUNDS}`,
+                  Taps: <Value v={taps.length} />,
+                  Estimate: <Value v={guess !== null ? guess.toFixed(1) : '—'} />,
+                }}
+              />
+            </div>
             <div className="row">
               <button
                 onClick={(e) => {
@@ -887,7 +895,7 @@ export function TapTempo({ source, onDone }: DrillProps) {
                 {taps.length < TT_MIN ? `Tap ${TT_MIN - taps.length} more` : 'Lock in'} {taps.length >= TT_MIN && <kbd>↵</kbd>}
               </button>
             </div>
-          </>
+          </div>
         ) : phase === 'result' && desc ? (
           <>
             <Verdict d={desc.d} pts={desc.pts} />
@@ -897,7 +905,10 @@ export function TapTempo({ source, onDone }: DrillProps) {
           </>
         ) : (
           <>
-            <p>Tap every beat ({TT_MIN}+ taps), then lock in. The tempo is hidden and randomised; your estimate shows on the pad after 4 taps.</p>
+            <p className="muted small">
+              Round {i + 1} of {ROUNDS} · <Value v={Math.round(total)} /> pts
+            </p>
+            <p>Tap every beat ({TT_MIN}+ taps), then lock in. The tempo is hidden and randomised; your estimate shows in the readout after 4 taps.</p>
             <button className="primary big" onClick={begin} disabled={phase === 'loading'}>
               {phase === 'loading' ? 'Loading…' : 'Play'}
             </button>
@@ -1113,22 +1124,9 @@ export function TempoMatch({ source, onDone }: DrillProps) {
 
   return (
     <div className="center">
-      <div className="drill-meta">
-        <span>
-          Round <Value v={i + 1} /> of {ROUNDS}
-        </span>
-        {phase === 'playing' && (
-          <span className={left <= 5 ? 'hot' : ''}>
-            <Value v={left} /> s left
-          </span>
-        )}
-        <span>
-          <Value v={Math.round(total)} /> pts
-        </span>
-      </div>
       <Swap k={`${i}-${phase === 'loading' ? 'ready' : phase}`}>
         {phase === 'playing' ? (
-          <div className="tempo-ui">
+          <div className="deck tempo-ui">
             <p className="muted">Deck B is off. Ride its pitch until the kicks stop drifting, nudge to line them up, then lock.</p>
             {i < TM_METER_ROUNDS && (
               <div className="phase-meter" ref={meter}>
@@ -1143,25 +1141,40 @@ export function TempoMatch({ source, onDone }: DrillProps) {
                 </div>
               </div>
             )}
-            <div className="pitch">
-              <span>slower</span>
-              <input type="range" min={-8} max={8} step={0.01} value={pitch} onChange={(e) => setP(Number(e.target.value))} aria-label="Deck B pitch" />
-              <span>faster</span>
-            </div>
-            <div className="row">
-              <button onClick={() => setP(pitch - 0.05)}>− fine</button>
-              <button onPointerDown={() => nudge(-1)} onPointerUp={unnudge} onPointerLeave={unnudge}>
-                ◀ nudge
-              </button>
-              <button onPointerDown={() => nudge(1)} onPointerUp={unnudge} onPointerLeave={unnudge}>
-                nudge ▶
-              </button>
-              <button onClick={() => setP(pitch + 0.05)}>+ fine</button>
+            <div className="deck-main">
+              <div className="tm-controls">
+                <div className="pitch">
+                  <span>slower</span>
+                  <input type="range" min={-8} max={8} step={0.01} value={pitch} onChange={(e) => setP(Number(e.target.value))} aria-label="Deck B pitch" />
+                  <span>faster</span>
+                </div>
+                <div className="row">
+                  <button onClick={() => setP(pitch - 0.05)}>− fine</button>
+                  <button onPointerDown={() => nudge(-1)} onPointerUp={unnudge} onPointerLeave={unnudge}>
+                    ◀ nudge
+                  </button>
+                  <button onPointerDown={() => nudge(1)} onPointerUp={unnudge} onPointerLeave={unnudge}>
+                    nudge ▶
+                  </button>
+                  <button onClick={() => setP(pitch + 0.05)}>+ fine</button>
+                </div>
+                <button className="primary big" onClick={lock}>
+                  Lock it
+                </button>
+              </div>
+              <Readout
+                items={{
+                  Round: `${i + 1} / ${ROUNDS}`,
+                  'Time left': (
+                    <span className={left <= 5 ? 'hot' : ''}>
+                      <Value v={`${left} s`} />
+                    </span>
+                  ),
+                  'B pitch': <Value v={`${pitch > 0 ? '+' : ''}${pitch.toFixed(2)} %`} />,
+                }}
+              />
             </div>
             <p className="muted small">Keys: ↑/↓ pitch (Shift for coarse), ←/→ hold to nudge, Enter to lock.</p>
-            <button className="primary big" onClick={lock}>
-              Lock it
-            </button>
           </div>
         ) : phase === 'result' && desc ? (
           <>
@@ -1172,6 +1185,9 @@ export function TempoMatch({ source, onDone }: DrillProps) {
           </>
         ) : (
           <>
+            <p className="muted small">
+              Round {i + 1} of {ROUNDS} · <Value v={Math.round(total)} /> pts
+            </p>
             <p>
               Deck A plays at its own tempo. Deck B joins after a bar, running 2–8% off. Fix it by ear.
               {i < TM_METER_ROUNDS ? ' A phase meter shows whether B is ahead or behind.' : ' No meter this round.'}

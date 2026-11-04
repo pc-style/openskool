@@ -118,9 +118,6 @@
   border-color: var(--bad);
 }
 
-.tt-count {
-  margin: 8px 0 0;
-}
 
 /* Tempo Match: live phase of deck B against deck A, ±half a beat. */
 .phase-meter {
@@ -196,8 +193,8 @@
   }
 }
 
-/* Downbeat Tapper as a deck: bar strip on top, pad beside a readout column */
-.db-deck {
+/* Timing drills as a deck: a strip on top, the pad or controls beside a readout column */
+.deck {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -207,13 +204,13 @@
   max-width: 640px;
   margin: 0 auto;
 }
-.db-main {
+.deck-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 168px;
   gap: 16px;
   align-items: stretch;
 }
-.db-main .tappad {
+.deck-main .tappad {
   width: 100%;
   max-width: none;
 }
@@ -240,11 +237,11 @@
   margin: 2px 0 0;
   font-size: 1.05rem;
 }
-.db-deck .grade-dots {
+.deck .grade-dots {
   align-self: center;
 }
 @media (max-width: 560px) {
-  .db-main {
+  .deck-main {
     grid-template-columns: 1fr;
   }
   .readout {
@@ -260,10 +257,30 @@
     border-left: 1px solid var(--border);
   }
 }
-.db-deck .barcounter {
+.deck .barcounter {
   width: 100%;
   max-width: none;
 }
-.center > .swap:has(.db-deck) {
+.center > .swap:has(.deck) {
   align-self: stretch;
+}
+.readout .hot {
+  color: var(--bad);
+}
+.deck > .row {
+  justify-content: center;
+}
+.tm-controls {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  min-width: 0;
+}
+.tm-controls .row {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.tm-controls .primary {
+  align-self: center;
 }
