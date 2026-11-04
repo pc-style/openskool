@@ -43,7 +43,7 @@ export function Profile() {
   return (
     <div className="profile">
       <h1>Profile</h1>
-      <div className="grid3 stats-grid">
+      <div className="stats-grid">
         <div className="stat">
           <b>
             <Value v={xp.toLocaleString()} />
@@ -60,24 +60,13 @@ export function Profile() {
           <b>
             <Value v={s.results.length} />
           </b>
-          drills played · {missionsDone(s)} missions
+          drills · {missionsDone(s)} missions
+        </div>
+        <div className="stat">
+          <b>{rounds > 0 ? `${Math.round((right / rounds) * 100)}%` : '—'}</b>
+          accuracy{bestStreak > 0 && <> · best run {bestStreak}</>}
         </div>
       </div>
-      {(rounds > 0 || bestStreak > 0) && (
-        <p className="muted small tabular extra-stats">
-          {rounds > 0 && (
-            <>
-              Accuracy <span className="fg">{Math.round((right / rounds) * 100)}%</span> ({right.toLocaleString()} of {rounds.toLocaleString()} rounds)
-            </>
-          )}
-          {rounds > 0 && bestStreak > 0 && ' · '}
-          {bestStreak > 0 && (
-            <>
-              Best streak <span className="fg">{bestStreak}</span> in a row
-            </>
-          )}
-        </p>
-      )}
 
       <div className="section-head">
         <h2>Rank</h2>
@@ -90,7 +79,11 @@ export function Profile() {
           return (
             <li key={r.name} className={here ? 'here' : k < rank.index ? 'passed' : ''} aria-current={here ? 'step' : undefined}>
               <span className="ladder-name">{r.name}</span>
-              <span className="ladder-bar">{here && next && <DMeter value={(xp - r.xp) / (next.xp - r.xp)} height={6} label={`${xp - r.xp} of ${next.xp - r.xp} XP through ${r.name}`} />}</span>
+              {/* every rank you have reached shows its bar: full behind you, filling where you are */}
+              <span className="ladder-bar">
+                {k < rank.index && <DMeter value={1} height={6} label={`${r.name} complete`} />}
+                {here && next && <DMeter value={(xp - r.xp) / (next.xp - r.xp)} height={6} label={`${xp - r.xp} of ${next.xp - r.xp} XP through ${r.name}`} />}
+              </span>
               <span className="muted small tabular">{here ? `You · ${xp.toLocaleString()} XP` : `${r.xp.toLocaleString()} XP`}</span>
             </li>
           )
@@ -104,7 +97,7 @@ export function Profile() {
         </span>
       </div>
       <ul className="badges">
-        {bs.map((b) => (
+        {[...bs.filter((b) => b.earned), ...bs.filter((b) => !b.earned)].map((b) => (
           <li key={b.id} className={b.earned ? 'earned' : ''}>
             <b>{b.name}</b>
             <span>{b.how}</span>

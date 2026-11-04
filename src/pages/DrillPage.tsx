@@ -93,8 +93,10 @@ function Drill({ id }: { id: string }) {
   // why "My tracks" is off, when it is
   const mineOff = !mineCount
     ? allTracks.length
-      ? `My tracks is off: your ${allTracks.length === 1 ? 'track has' : `${allTracks.length} tracks have`} no tempo and grid yet${allTracks.some((t) => t.status === 'analysing') ? ' (still analysing)' : ''}.`
-      : 'My tracks is off: there is no music in your Library yet.'
+      ? allTracks.some((t) => t.status === 'analysing')
+        ? 'Your tracks are still analysing.'
+        : 'Your tracks need a tempo and grid before drills can use them.'
+      : 'Want to drill on your own music?'
     : ''
   const kind: SourceKind = meta.audio === 'mine' && s.settings.source === 'mine' && mineCount ? 'mine' : 'builtin'
   const genre = s.settings.genre
@@ -117,7 +119,7 @@ function Drill({ id }: { id: string }) {
   const aheadGenres = picker ? (Object.keys(GENRES) as Genre[]).filter(isAhead) : []
   const advisory = (g: Genre) => (
     <p className="muted small">
-      {GENRES[g].name} {GENRES[g].bpm} is ahead of where you are: it is recommended from {WORLDS.find((w) => w.genre === g)!.xp.toLocaleString()} XP. Faster tempos leave less room for error, so expect lower scores at first.
+      Recommended from {WORLDS.find((w) => w.genre === g)!.xp.toLocaleString()} XP. Expect lower scores at first.
     </p>
   )
   const overall = best(s, meta.id)
@@ -205,18 +207,12 @@ function Drill({ id }: { id: string }) {
               {worldMultNow > 1 && <> · {worldMultNow}× XP in {GENRES[genre].name}</>}
               {daily && <> · <span className="fg">2× XP today</span></>}
             </p>
-            <ul className="teach">
-              {meta.teach.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ul>
-            {meta.audio !== 'none' && meta.audioNote && <p className="muted small">{meta.audioNote}</p>}
             {picker && (
               <div className="source">
                 <span className="label">Audio</span>
                 <div className="seg-group source-wide" role="group" aria-label="Audio source">
-                  {meta.audio === 'mine' && (
-                    <button className={kind === 'mine' ? 'seg on' : 'seg'} disabled={!mineCount} onClick={() => updateSettings({ source: 'mine' })} title={mineOff} aria-describedby={mineOff ? 'mine-off' : undefined}>
+                  {meta.audio === 'mine' && mineCount > 0 && (
+                    <button className={kind === 'mine' ? 'seg on' : 'seg'} onClick={() => updateSettings({ source: 'mine' })}>
                       My tracks ({mineCount})
                     </button>
                   )}
@@ -234,11 +230,7 @@ function Drill({ id }: { id: string }) {
                   value={kind === 'mine' ? 'mine' : genre}
                   onChange={(e) => (e.target.value === 'mine' ? updateSettings({ source: 'mine' }) : updateSettings({ source: 'builtin', genre: e.target.value as Genre }))}
                 >
-                  {meta.audio === 'mine' && (
-                    <option value="mine" disabled={!mineCount}>
-                      My tracks ({mineCount})
-                    </option>
-                  )}
+                  {meta.audio === 'mine' && mineCount > 0 && <option value="mine">My tracks ({mineCount})</option>}
                   {(Object.keys(GENRES) as Genre[]).map((g) => (
                     <option key={g} value={g}>
                       {GENRES[g].name} {GENRES[g].bpm}
@@ -248,17 +240,10 @@ function Drill({ id }: { id: string }) {
                 </select>
               </div>
             )}
-            {meta.audio === 'mine' && !mineCount && (
-              <p className="muted small mine-note" id="mine-off">
-                {mineOff} <Link to="/library">{allTracks.length ? 'Open the Library' : 'Add your own tracks'}</Link> and every audio drill that offers My tracks runs on your music.
-              </p>
-            )}
             {meta.decks === 2 && kind === 'mine' && mineCount === 1 && (
               <p className="muted small">You have one track, so deck B will be a contrasting built-in groove played at your track's tempo.</p>
             )}
             {meta.needs && kind === 'mine' && <p className="muted small">{meta.needs}</p>}
-            {/* while any world is ahead of you, its note keeps its room, so switching worlds does not move Start */}
-            {aheadGenres.length > 0 && <Reserve className="advisory" shape={aheadGenres.map(advisory)}>{aheadOfYou && advisory(genre)}</Reserve>}
             <div className="row start-row">
               {Learn ? (
                 <>
@@ -286,6 +271,20 @@ function Drill({ id }: { id: string }) {
                 )}
               </span>
             </div>
+            {meta.audio === 'mine' && !mineCount && (
+              <p className="muted small mine-note">
+                {mineOff} <Link to="/library">{allTracks.length ? 'Open the Library\u00a0→' : 'Add tracks in the Library\u00a0→'}</Link>
+              </p>
+            )}
+            {/* while any world is ahead of you, its note keeps its room under Start, so switching worlds moves nothing */}
+            {aheadGenres.length > 0 && <Reserve className="advisory" shape={aheadGenres.map(advisory)}>{aheadOfYou && advisory(genre)}</Reserve>}
+            <h2 className="intro-head">How it works</h2>
+            <ul className="teach">
+              {meta.teach.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+            {meta.audio !== 'none' && meta.audioNote && <p className="muted small">{meta.audioNote}</p>}
           </div>
         )}
         {phase === 'learn' && Learn && (

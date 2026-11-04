@@ -18,9 +18,7 @@ export function Course() {
   return (
     <div className="course">
       <h1>The course</h1>
-      <p className="muted">
-        Eight weeks, from counting bars to recording a full mix. All weeks are open. Missions are drill scores or a step in the app, practice tasks are for your own decks.
-      </p>
+      <p className="muted page-intro">Eight weeks, from counting bars to recording a full mix. Every week is open.</p>
       <div className="course-progress">
         <DMeter value={done / total} label={`${done} of ${total} complete`} />
         <span className="muted small tabular">
@@ -56,21 +54,10 @@ export function Course() {
               {isOpen && (
                 <div className={`week-body ${touched ? 'fade-in' : ''}`}>
                   <p className="goal">{w.goal}</p>
-                  {w.lessons.map((l) => (
-                    <div key={l.title} className="lesson">
-                      <h3>{l.title}</h3>
-                      <p>{l.body}</p>
-                      {l.link && (
-                        <p className="lesson-link">
-                          <Link to={l.link.to}>{l.link.text} →</Link>
-                        </p>
-                      )}
-                    </div>
-                  ))}
                   <div className="missions-head">
                     <h3 className="label">Missions</h3>
                     <span className="muted small tabular">
-                      +{MISSION_XP} XP each · {w.missions.filter((m) => missionDone(s, m)).length}/{w.missions.length} done{w.n === cur.n ? ' this week' : ''}
+                      +{MISSION_XP} XP each · {w.missions.filter((m) => missionDone(s, m)).length} of {w.missions.length} done
                     </span>
                   </div>
                   <ul className="missions">
@@ -108,7 +95,7 @@ export function Course() {
                             </span>
                           </span>
                           <span className="mission-meter">
-                            <DMeter value={b / m.min} height={6} color={ok ? 'green' : 'ink'} label={`Best ${b} of ${m.min}`} />
+                            <span className="mm-bar">{b > 0 && <DMeter value={b / m.min} height={6} color={ok ? 'green' : 'ink'} label={`Best ${b} of ${m.min}`} />}</span>
                             <span className="muted small tabular">
                               {b || '—'} / {m.min}
                             </span>
@@ -131,6 +118,23 @@ export function Course() {
                       </li>
                     ))}
                   </ul>
+                  {/* the reading sits under the work, one click away */}
+                  <details className="notes">
+                    <summary>
+                      Lesson notes <span className="muted tabular">· {w.lessons.length}</span>
+                    </summary>
+                    {w.lessons.map((l) => (
+                      <div key={l.title} className="lesson">
+                        <h3>{l.title}</h3>
+                        <p>{l.body}</p>
+                        {l.link && (
+                          <p className="lesson-link">
+                            <Link to={l.link.to}>{l.link.text} →</Link>
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </details>
                 </div>
               )}
             </li>

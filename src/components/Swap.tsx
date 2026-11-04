@@ -104,12 +104,13 @@ export function Swap({
 
 /**
  * A single value that dissolves when it changes; the surrounding label stays put.
- * `w` reserves that many digits, right-aligned, so a longer number does not push the label.
+ * `w` reserves that many characters so a longer value does not push the label: right-aligned by default,
+ * or left-aligned with `start` when the value ends its line and the spare room can trail it unseen.
  */
-export function Value({ v, w }: { v: string | number; w?: number }) {
+export function Value({ v, w, start }: { v: string | number; w?: number; start?: boolean }) {
   return (
     <Swap k={v} inline>
-      {w ? <span style={{ display: 'inline-block', minWidth: `${w}ch`, textAlign: 'right' }}>{v}</span> : v}
+      {w ? <span style={{ display: 'inline-block', minWidth: `${w}ch`, textAlign: start ? 'left' : 'right' }}>{v}</span> : v}
     </Swap>
   )
 }

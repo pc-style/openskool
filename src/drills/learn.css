@@ -1,9 +1,14 @@
 /* Learn steps before the knowledge quizzes. Quiet: weight and spacing, neutral tokens, lime only for selection. */
 
 .learn {
-  max-width: 680px;
-  margin: 0 auto;
+  max-width: 720px;
   min-width: 0;
+}
+.learn-sub {
+  margin: 32px 0 10px;
+  font-size: 0.867rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
 }
 .learn-lead {
   font-weight: 500;
@@ -14,6 +19,7 @@
   margin: 0 0 24px;
   padding-left: 1.4em;
   line-height: 1.55;
+  max-width: 62ch;
 }
 .learn-rules li + li {
   margin-top: 8px;
@@ -43,11 +49,10 @@
   margin-top: 28px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
-  text-align: center;
 }
 .learn-foot p {
-  max-width: 52ch;
-  margin: 0 auto 12px;
+  max-width: 62ch;
+  margin: 0 0 12px;
   text-wrap: pretty;
 }
 
@@ -360,4 +365,7 @@
     margin-left: 0;
     width: 100%;
   }
+}
+.learn > .learn-lead:first-child {
+  margin-bottom: 16px;
 }

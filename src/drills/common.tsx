@@ -265,21 +265,26 @@ export function ChoiceDrill({
   return (
     <div className="choice">
       <div className="drill-meta">
+        {/* each value ends its group, so the room it reserves trails it unseen instead of opening a gap */}
         {timed ? (
           <span className={left <= 10 ? 'hot' : ''}>
-            <Value v={Math.max(0, left)} w={2} /> s left
+            <Value v={`${Math.max(0, left)} s left`} w={9} start />
           </span>
         ) : (
           <span>
-            Round <Value v={Math.min(i + 1, rounds)} w={nw} /> of {rounds}
+            Round <Value v={`${Math.min(i + 1, rounds)} of ${rounds}`} w={4 + 2 * nw} start />
           </span>
         )}
-        <span>
-          <Value v={right} w={nw} /> right · <Value v={wrong} w={nw} /> wrong
+        <span className="meta-counts">
           {/* the streak keeps its place while hidden, so the counts beside it stay put */}
           <span className={streak >= 2 ? undefined : 'invisible'} aria-hidden={streak < 2 || undefined}>
-            {' '}
-            · streak <Value v={streak} w={nw} />
+            <Value v={streak} w={nw} /> in a row
+          </span>
+          <span>
+            <Value v={right} w={nw} /> right
+          </span>
+          <span>
+            <Value v={wrong} w={nw} /> wrong
           </span>
         </span>
       </div>
