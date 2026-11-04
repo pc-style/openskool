@@ -2,12 +2,31 @@
 import { getSettings } from '../lib/progress'
 
 let ctx: AudioContext | null = null
+let master: GainNode | null = null
+let scope: AnalyserNode | null = null
 
 export function ac(): AudioContext {
-  if (!ctx) ctx = new AudioContext({ latencyHint: 'interactive' })
+  if (!ctx) {
+    ctx = new AudioContext({ latencyHint: 'interactive' })
+    master = ctx.createGain()
+    scope = ctx.createAnalyser()
+    scope.fftSize = 2048
+    scope.smoothingTimeConstant = 0.6
+    master.connect(ctx.destination)
+    master.connect(scope)
+  }
   if (ctx.state === 'suspended') void ctx.resume()
   return ctx
 }
+
+/** Everything audible goes through here, so visualisers can listen to it. */
+export function out(): AudioNode {
+  ac()
+  return master!
+}
+
+/** The analyser on the master output, or null before any audio has been set up. */
+export const outputAnalyser = () => scope
 
 const active = new Set<AudioScheduledSourceNode>()
 
@@ -39,6 +58,8 @@ export interface PlayOptions {
   /** Where to connect the source; defaults to destination. */
   to?: AudioNode
   gain?: number
+  /** Stereo position, -1 left to 1 right. */
+  pan?: number
 }
 
 export function play(buffer: AudioBuffer, o: PlayOptions) {
@@ -48,7 +69,11 @@ export function play(buffer: AudioBuffer, o: PlayOptions) {
   src.playbackRate.value = o.rate ?? 1
   const g = c.createGain()
   g.gain.value = o.gain ?? 1
-  src.connect(g).connect(o.to ?? c.destination)
+  if (o.pan) {
+    const p = c.createStereoPanner()
+    p.pan.value = o.pan
+    src.connect(g).connect(p).connect(o.to ?? out())
+  } else src.connect(g).connect(o.to ?? out())
   const at = o.at ?? c.currentTime + 0.12
   const from = Math.max(0, o.from)
   // when asked to start before the buffer begins, delay the start instead
@@ -66,7 +91,7 @@ export function click(at: number, accent = false, level = 0.35, to?: AudioNode) 
   g.gain.setValueAtTime(0, at)
   g.gain.linearRampToValueAtTime(level, at + 0.001)
   g.gain.exponentialRampToValueAtTime(0.0001, at + 0.04)
-  o.connect(g).connect(to ?? c.destination)
+  o.connect(g).connect(to ?? out())
   o.start(at)
   o.stop(at + 0.05)
 }

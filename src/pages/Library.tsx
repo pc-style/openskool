@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { ac, click, play, stopAll } from '../audio/engine'
-import { addFiles, decodeTrack, removeTrack, setGrid, useTracks, type TrackMeta } from '../lib/library'
+import { Swap } from '../components/Swap'
+import { RippleField } from '../components/viz/fields'
+import { DitherWave, DMeter } from '../components/viz/meters'
+import { addFiles, decodeTrack, importShared, removeTrack, setGrid, useTracks, type TrackMeta } from '../lib/library'
+
+declare global {
+  interface Window {
+    /** File Handling API: audio files opened with the installed app. */
+    launchQueue?: { setConsumer(consumer: (params: { files?: FileSystemFileHandle[] }) => void): void }
+  }
+}
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
@@ -12,6 +22,15 @@ export function Library() {
   const onFiles = (fl: FileList | null) => {
     if (fl?.length) void addFiles([...fl])
   }
+  useEffect(() => {
+    // audio shared to, or opened with, the installed app
+    void importShared()
+    window.launchQueue?.setConsumer(async ({ files = [] }) => {
+      const picked = await Promise.all(files.map((h) => h.getFile()))
+      if (picked.length) void addFiles(picked)
+    })
+  }, [])
+  const busy = tracks.some((x) => x.status === 'analysing')
   const t = tracks.find((x) => x.id === editing)
   return (
     <div className="library">
@@ -21,7 +40,9 @@ export function Library() {
         using a track for timing drills: the analysis is good, not perfect.
       </p>
       <div
-        className={`drop ${drag ? 'over' : ''}`}
+        className={`drop ${drag ? 'over' : ''} ${busy ? 'busy' : ''}`}
+        role="button"
+        tabIndex={0}
         onDragOver={(e) => {
           e.preventDefault()
           setDrag(true)
@@ -33,65 +54,131 @@ export function Library() {
           onFiles(e.dataTransfer.files)
         }}
         onClick={() => input.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return
+          e.preventDefault()
+          input.current?.click()
+        }}
       >
-        <strong>Drop audio files here</strong> or click to choose. MP3, WAV, FLAC, AAC, OGG.
+        {(drag || busy) && (
+          <div className="drop-art fade-in" aria-hidden="true">
+            <RippleField className="absolute inset-0" />
+          </div>
+        )}
+        <Swap k={busy ? 'busy' : 'idle'}>
+          {busy ? (
+            <>
+              <strong>Analysing…</strong>
+              <span>Tempo, beat grid, phrase, key and energy. A few seconds per track.</span>
+            </>
+          ) : (
+            <>
+              <strong>Drop audio files here</strong>
+              <span>or click to choose. MP3, WAV, FLAC, AAC, OGG.</span>
+            </>
+          )}
+        </Swap>
         <input ref={input} type="file" accept="audio/*" multiple hidden onChange={(e) => onFiles(e.target.files)} />
       </div>
-      {t?.analysis && <GridEditor track={t} onClose={() => setEditing(null)} />}
-      {tracks.length > 0 && (
-        <table className="tracks">
-          <thead>
-            <tr>
-              <th>Track</th>
-              <th>BPM</th>
-              <th>Key</th>
-              <th>Energy</th>
-              <th>Length</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {tracks.map((tr) => (
-              <tr key={tr.id}>
-                <td>
-                  {tr.name} {tr.edited && <span className="tag">grid edited</span>}
-                </td>
-                {tr.status === 'ready' && tr.analysis ? (
-                  <>
-                    <td className="num">{tr.analysis.bpm.toFixed(2)}</td>
-                    <td>{tr.analysis.camelot ? `${tr.analysis.camelot} · ${tr.analysis.keyName}` : '—'}</td>
-                    <td>
-                      <span className="energy">
-                        <i style={{ width: `${tr.analysis.energy * 100}%` }} />
-                      </span>
-                    </td>
-                    <td className="num">{fmt(tr.analysis.duration)}</td>
-                    <td className="actions">
-                      <button onClick={() => setEditing(tr.id)}>Grid</button>
-                      <button className="ghost" onClick={() => void removeTrack(tr.id)} aria-label={`Remove ${tr.name}`}>
-                        ✕
-                      </button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td colSpan={4} className="muted">
-                      {tr.status === 'error' ? `Could not read: ${tr.error}` : 'Analysing…'}
-                    </td>
-                    <td className="actions">
-                      <button className="ghost" onClick={() => void removeTrack(tr.id)}>
-                        ✕
-                      </button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {tracks.length === 0 && (
+        <p className="muted small">Once openskool is installed (browser menu, Add to Home Screen), you can also share audio files to it from other apps.</p>
       )}
+      {tracks.length > 0 && (
+        <>
+          <div className="section-head">
+            <h2>Your tracks</h2>
+            <span className="muted small">
+              {tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}
+            </span>
+          </div>
+          <table className="tracks">
+            <thead>
+              <tr>
+                <th>Track</th>
+                <th className="r">BPM</th>
+                <th>Key</th>
+                <th className="energy-col">Energy</th>
+                <th className="r">Length</th>
+                <th>
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {tracks.map((tr) => (
+                <tr key={tr.id} className={editing === tr.id ? 'editing' : ''}>
+                  <td className="tname">
+                    <span className="tname-text" title={tr.name}>
+                      {tr.name}
+                    </span>
+                    {tr.edited && <span className="tag">Grid edited</span>}
+                  </td>
+                  {tr.status === 'ready' && tr.analysis ? (
+                    <>
+                      <td className="num r">{tr.analysis.bpm.toFixed(2)}</td>
+                      <td className="key">
+                        {tr.analysis.camelot ? (
+                          <>
+                            {tr.analysis.camelot}
+                            <span className="muted keyname"> · {tr.analysis.keyName}</span>
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="energy-col">
+                        <div className="energy-cell">
+                          <DMeter value={tr.analysis.energy} height={6} label={`Energy ${Math.round(tr.analysis.energy * 100)} of 100`} />
+                        </div>
+                      </td>
+                      <td className="num r">{fmt(tr.analysis.duration)}</td>
+                      <td className="actions">
+                        <button className="small" aria-pressed={editing === tr.id} onClick={() => setEditing(editing === tr.id ? null : tr.id)}>
+                          Grid
+                        </button>
+                        <button className="ghost small icon" onClick={() => void removeTrack(tr.id)} aria-label={`Remove ${tr.name}`}>
+                          ✕
+                        </button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td colSpan={4} className={tr.status === 'error' ? 'bad' : 'muted'}>
+                        {tr.status === 'error' ? `Could not read: ${tr.error}` : 'Analysing…'}
+                      </td>
+                      <td className="actions">
+                        <button className="ghost small icon" onClick={() => void removeTrack(tr.id)} aria-label={`Remove ${tr.name}`}>
+                          ✕
+                        </button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+      {t?.analysis && <GridEditor key={t.id} track={t} onClose={() => setEditing(null)} />}
     </div>
   )
+}
+
+/** Bumps when the theme class on <html> changes or the element resizes, so the canvas can redraw. */
+function useRedraw(el: React.RefObject<HTMLElement | null>) {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    const bump = () => setN((x) => x + 1)
+    const mo = new MutationObserver(bump)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    const ro = new ResizeObserver(bump)
+    if (el.current) ro.observe(el.current)
+    return () => {
+      mo.disconnect()
+      ro.disconnect()
+    }
+  }, [el])
+  return n
 }
 
 function GridEditor({ track, onClose }: { track: TrackMeta; onClose: () => void }) {
@@ -102,6 +189,8 @@ function GridEditor({ track, onClose }: { track: TrackMeta; onClose: () => void 
   const [buf, setBuf] = useState<AudioBuffer | null>(null)
   const [taps, setTaps] = useState<number[]>([])
   const canvas = useRef<HTMLCanvasElement>(null)
+  const box = useRef<HTMLElement>(null)
+  const redraw = useRedraw(box)
   const VIEW = 4
   const bl = 240 / bpm
   const viewStart = anchor + bar * bl - bl * 0.25
@@ -117,8 +206,17 @@ function GridEditor({ track, onClose }: { track: TrackMeta; onClose: () => void 
   }, [track.id])
 
   useEffect(() => {
+    box.current?.scrollIntoView({ block: 'nearest' })
+  }, [])
+
+  useEffect(() => {
     const cv = canvas.current
     if (!cv || !buf) return
+    const css = getComputedStyle(document.documentElement)
+    const fg = css.getPropertyValue('--foreground').trim()
+    const muted = css.getPropertyValue('--muted-foreground').trim()
+    const lime = css.getPropertyValue('--lime').trim()
+    const font = css.getPropertyValue('--font-ui').trim()
     const dpr = window.devicePixelRatio || 1
     const W = cv.clientWidth
     const H = cv.clientHeight
@@ -129,7 +227,9 @@ function GridEditor({ track, onClose }: { track: TrackMeta; onClose: () => void 
     g.clearRect(0, 0, W, H)
     const d = buf.getChannelData(0)
     const sr = buf.sampleRate
-    g.fillStyle = '#3a414d'
+    // full band, quiet
+    g.fillStyle = muted
+    g.globalAlpha = 0.4
     for (let x = 0; x < W; x++) {
       const t0 = viewStart + (x / W) * viewDur
       const t1 = viewStart + ((x + 1) / W) * viewDur
@@ -152,25 +252,31 @@ function GridEditor({ track, onClose }: { track: TrackMeta; onClose: () => void 
       if (x >= 0 && x < W) lowPx[x] = Math.max(lowPx[x], Math.abs(y))
     }
     const lmax = Math.max(1e-6, ...lowPx)
-    g.fillStyle = '#e8eaed'
+    g.fillStyle = fg
+    g.globalAlpha = 0.85
     for (let x = 0; x < W; x++) {
       const h = (lowPx[x] / lmax) ** 3 * H * 0.42
       g.fillRect(x, H / 2 - h, 1, Math.max(1, 2 * h))
     }
+    // the grid: faint beats, solid numbered bar starts, green phrase starts
     const beat = 60 / bpm
     const k0 = Math.ceil((viewStart - anchor) / beat)
+    g.font = `500 11px ${font}`
+    g.textBaseline = 'top'
     for (let k = k0; anchor + k * beat < viewStart + viewDur; k++) {
-      const x = ((anchor + k * beat - viewStart) / viewDur) * W
+      const x = Math.round(((anchor + k * beat - viewStart) / viewDur) * W)
       const isBar = k % 4 === 0
       const isPhrase = k % 32 === 0
-      g.fillStyle = isPhrase ? '#d4ff3a' : isBar ? '#ff7a45' : 'rgba(255,255,255,0.25)'
-      g.fillRect(x, 0, isPhrase ? 3 : isBar ? 2 : 1, H)
+      g.fillStyle = isPhrase ? lime : isBar ? fg : muted
+      g.globalAlpha = isPhrase ? 1 : isBar ? 0.7 : 0.45
+      g.fillRect(x - (isBar ? 1 : 0), 0, isBar ? 2 : 1, H)
       if (isBar) {
-        g.font = '11px ui-monospace, monospace'
-        g.fillText(`${Math.floor(k / 4)}${isPhrase ? ' ◆ phrase' : ''}`, x + 4, 12)
+        g.globalAlpha = 1
+        g.fillText(`${Math.floor(k / 4)}${isPhrase ? '  phrase' : ''}`, x + 5, 6)
       }
     }
-  }, [buf, bpm, anchor, bar, viewStart, viewDur])
+    g.globalAlpha = 1
+  }, [buf, bpm, anchor, bar, viewStart, viewDur, redraw])
 
   const listen = () => {
     if (!buf) return
@@ -196,47 +302,84 @@ function GridEditor({ track, onClose }: { track: TrackMeta; onClose: () => void 
   }
 
   return (
-    <div className="card grid-editor">
-      <div className="row between">
-        <h2>Grid · {track.name}</h2>
+    <section ref={box} className="grid-editor" aria-label={`Beat grid for ${track.name}`}>
+      <div className="ge-head">
+        <div>
+          <h2>Beat grid</h2>
+          <p className="muted small">{track.name}</p>
+        </div>
         <button className="ghost" onClick={onClose}>
           Close
         </button>
       </div>
-      <p className="muted small">
-        Orange lines are bar starts (the 1), green is the start of an 8-bar phrase. Play with the click: if it flams, fix the BPM; if the accent is not on the 1, shift by a
-        beat; click the waveform to put the 1 of bar {bar} there.
+      <p className="muted small ge-help">
+        Bar starts are the solid numbered lines, faint lines are beats, and green marks the start of an 8-bar phrase. Play with the click: if it flams, fix the BPM; if the
+        accent is not on the 1, shift by a beat. Click the waveform to put the 1 of bar {bar} there.
       </p>
-      <Overview peaks={a.peaks} duration={a.duration} pos={(anchor + bar * bl) / a.duration} onSeek={(f) => setBar(Math.round((f * a.duration - anchor) / bl))} />
+      <DitherWave
+        peaks={a.peaks}
+        height={36}
+        window={[viewStart / a.duration, (viewStart + viewDur) / a.duration]}
+        label={`Track overview, ${fmt(a.duration)}. Showing bars ${bar} to ${bar + VIEW - 1}. Click to move there.`}
+        onSeek={(f) => setBar(Math.round((f * a.duration - anchor) / bl))}
+      />
       {buf ? <canvas ref={canvas} className="wave" onClick={onCanvasClick} /> : <div className="wave loading">Decoding…</div>}
-      <div className="row wrap">
-        <button onClick={() => setBar(bar - 8)}>« 8</button>
-        <button onClick={() => setBar(bar - 1)}>‹ bar</button>
-        <span className="num">bar {bar}</span>
-        <button onClick={() => setBar(bar + 1)}>bar ›</button>
-        <button onClick={() => setBar(bar + 8)}>8 »</button>
-        <button className="primary" onClick={listen}>
-          ▶ Play with click
-        </button>
-        <button onClick={stopAll}>■</button>
+      <div className="ge-controls">
+        <span className="ge-label">Position</span>
+        <div className="ge-group">
+          <div className="btn-group">
+            <button onClick={() => setBar(bar - 8)} aria-label="Back 8 bars">
+              « 8
+            </button>
+            <button onClick={() => setBar(bar - 1)} aria-label="Back 1 bar">
+              ‹
+            </button>
+            <button onClick={() => setBar(bar + 1)} aria-label="Forward 1 bar">
+              ›
+            </button>
+            <button onClick={() => setBar(bar + 8)} aria-label="Forward 8 bars">
+              8 »
+            </button>
+          </div>
+          <span className="num ge-bar">Bar {bar}</span>
+          <div className="btn-group">
+            <button className="primary" onClick={listen} disabled={!buf}>
+              ▶ Play with click
+            </button>
+            <button onClick={stopAll} aria-label="Stop">
+              ■
+            </button>
+          </div>
+        </div>
+        <span className="ge-label">Tempo</span>
+        <div className="ge-group">
+          <label className="ge-bpm">
+            <input type="number" step={0.01} value={bpm} onChange={(e) => setBpm(Number(e.target.value) || bpm)} className="num" aria-label="BPM" />
+            <span className="muted">BPM</span>
+          </label>
+          <div className="btn-group">
+            <button onClick={() => setBpm(Math.round(bpm * 200) / 100)}>×2</button>
+            <button onClick={() => setBpm(Math.round(bpm * 50) / 100)}>÷2</button>
+          </div>
+          <button onClick={tap}>Tap{taps.length >= 4 ? ` · ${taps.length}` : ''}</button>
+        </div>
+        <span className="ge-label">Shift grid</span>
+        <div className="ge-group">
+          <div className="btn-group">
+            <button onClick={() => setAnchor(anchor - 0.005)}>−5 ms</button>
+            <button onClick={() => setAnchor(anchor + 0.005)}>+5 ms</button>
+          </div>
+          <div className="btn-group">
+            <button onClick={() => setAnchor(anchor - 60 / bpm)}>−1 beat</button>
+            <button onClick={() => setAnchor(anchor + 60 / bpm)}>+1 beat</button>
+          </div>
+          <div className="btn-group">
+            <button onClick={() => setAnchor(anchor - bl)}>−1 bar</button>
+            <button onClick={() => setAnchor(anchor + bl)}>+1 bar</button>
+          </div>
+        </div>
       </div>
-      <div className="row wrap">
-        <label>
-          BPM <input type="number" step={0.01} value={bpm} onChange={(e) => setBpm(Number(e.target.value) || bpm)} className="num" />
-        </label>
-        <button onClick={() => setBpm(Math.round(bpm * 200) / 100)}>×2</button>
-        <button onClick={() => setBpm(Math.round(bpm * 50) / 100)}>÷2</button>
-        <button onClick={tap}>Tap{taps.length >= 4 ? ` (${taps.length})` : ''}</button>
-        <span className="sep" />
-        Shift
-        <button onClick={() => setAnchor(anchor - 0.005)}>−5 ms</button>
-        <button onClick={() => setAnchor(anchor + 0.005)}>+5 ms</button>
-        <button onClick={() => setAnchor(anchor - 60 / bpm)}>−1 beat</button>
-        <button onClick={() => setAnchor(anchor + 60 / bpm)}>+1 beat</button>
-        <button onClick={() => setAnchor(anchor - bl)}>−1 bar</button>
-        <button onClick={() => setAnchor(anchor + bl)}>+1 bar</button>
-      </div>
-      <div className="row">
+      <div className="ge-foot">
         <button
           className="primary"
           onClick={() => {
@@ -260,24 +403,6 @@ function GridEditor({ track, onClose }: { track: TrackMeta; onClose: () => void 
           Revert
         </button>
       </div>
-    </div>
-  )
-}
-
-function Overview({ peaks, duration, pos, onSeek }: { peaks: number[]; duration: number; pos: number; onSeek: (f: number) => void }) {
-  return (
-    <svg
-      className="overview"
-      viewBox={`0 0 ${peaks.length} 100`}
-      preserveAspectRatio="none"
-      onClick={(e) => {
-        const r = e.currentTarget.getBoundingClientRect()
-        onSeek((e.clientX - r.left) / r.width)
-      }}
-      aria-label={`Track overview, ${fmt(duration)}`}
-    >
-      <path d={peaks.map((p, i) => `M${i} ${50 - p * 48}V${50 + p * 48}`).join('')} stroke="#4b5563" strokeWidth={1} />
-      <rect x={pos * peaks.length} width={Math.max(2, peaks.length / 80)} height={100} fill="#d4ff3a" opacity={0.8} />
-    </svg>
+    </section>
   )
 }

@@ -1,0 +1,412 @@
+/* Today, drill intro and results, Profile and Course additions. Tokens come from index.css. */
+
+.fg {
+  color: var(--foreground);
+}
+
+/* ---------- today ---------- */
+
+.hero .headphones {
+  margin: 0;
+}
+/* the hero sizes the rank line to its content, so the meter needs a width of its own */
+.rankline .dmeter {
+  min-width: 96px;
+}
+.section-head.first {
+  margin-top: 0;
+}
+.first-steps {
+  margin-bottom: 24px;
+}
+.steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.steps li a {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 16px;
+  text-decoration: none;
+  transition: background-color 150ms var(--ease);
+}
+.steps li a:hover {
+  background: var(--hover);
+}
+.steps .mark {
+  color: var(--muted-foreground);
+}
+.step-text b {
+  display: block;
+  font-weight: 500;
+}
+.step-text .small {
+  display: block;
+  margin-top: 2px;
+}
+.steps .done b {
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.steps .done .mark {
+  color: var(--good);
+}
+.today .skills {
+  margin-top: 32px;
+  max-width: 520px;
+}
+
+/* ---------- drill intro ---------- */
+
+.drill-desc {
+  color: var(--muted-foreground);
+  margin: 0 0 4px;
+}
+.drill-facts {
+  margin: 0;
+}
+.source-compact {
+  display: none;
+}
+.start-row {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+@media (max-width: 560px) {
+  /* Start sits above the explainer so it shows without scrolling */
+  .intro {
+    display: flex;
+    flex-direction: column;
+  }
+  .intro .drill-facts {
+    order: 0;
+  }
+  .intro .source,
+  .intro .mine-note {
+    order: 1;
+  }
+  .intro .start-row {
+    order: 2;
+  }
+  .intro .teach,
+  .intro > p:not(.drill-facts):not(.mine-note) {
+    order: 3;
+  }
+  .intro .source {
+    margin: 12px 0 0;
+    flex-wrap: nowrap;
+  }
+  .source-wide {
+    display: none;
+  }
+  .source-compact {
+    display: inline-flex;
+    flex: 1;
+    min-width: 0;
+  }
+  .intro .teach {
+    margin-top: 8px;
+  }
+  .drill-page h1 {
+    margin-bottom: 2px;
+  }
+}
+
+/* ---------- results ---------- */
+
+.results-lines {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.results-lines p {
+  margin: 0;
+}
+.unlock {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 500;
+  margin: 0;
+}
+.unlock::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+}
+.xp-box {
+  margin-top: 20px;
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.xp-box p {
+  margin: 0;
+}
+.xp-total {
+  font-weight: 500;
+}
+.xp-total .small {
+  font-weight: 400;
+  margin-left: 6px;
+}
+.xp-rank {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+.xp-rank .dmeter {
+  flex: none;
+  width: 100%;
+}
+.results-actions {
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.misses {
+  margin-top: 28px;
+  width: min(560px, 100%);
+  text-align: left;
+}
+.misses h3 {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.misses ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.misses li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+}
+.misses li + li {
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- profile ---------- */
+
+.extra-stats {
+  margin: 0;
+}
+.ladder {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.ladder li {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 16px;
+  color: var(--muted-foreground);
+}
+.ladder li.passed {
+  color: var(--foreground);
+}
+.ladder li.here {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.ladder li.here .small {
+  color: var(--foreground);
+  font-weight: 400;
+}
+.badges {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+.badges li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--muted-foreground);
+  font-size: 0.87rem;
+}
+.badges li b {
+  font-weight: 500;
+  font-size: 0.93rem;
+}
+.badges li.earned {
+  background: var(--card);
+  color: var(--foreground);
+}
+.badges li.earned b {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.badges li.earned b::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+}
+.badges li.earned span {
+  color: var(--muted-foreground);
+}
+
+@media (max-width: 560px) {
+  .ladder li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ladder-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .ladder-bar:empty {
+    display: none;
+  }
+}
+
+/* ---------- course ---------- */
+
+.week-body .missions-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  max-width: 720px;
+  margin: 28px 0 4px;
+}
+.week-body .missions-head h3.label {
+  margin: 0;
+}
+.lesson p.lesson-link {
+  margin-top: -4px;
+  font-size: 0.93rem;
+}
+
+/* ---------- tempo worlds ---------- */
+.hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.worlds {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.worlds ol {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+.worlds li + li::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 1px;
+  margin: 0 6px;
+  vertical-align: middle;
+  background: var(--border);
+}
+.worlds a {
+  color: var(--muted-foreground);
+  text-decoration: none;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.worlds a:hover {
+  color: var(--foreground);
+  background: var(--hover);
+}
+.worlds li.reached a {
+  color: var(--foreground);
+}
+.worlds li[aria-current] a {
+  box-shadow: inset 0 -2px 0 var(--lime);
+}
+.seg-mult {
+  color: var(--muted-foreground);
+  font-size: 0.8em;
+}
+.world-picker {
+  margin: 4px 0 20px;
+}
+@media (max-width: 860px) {
+  .hero-side {
+    align-items: stretch;
+  }
+  /* rank and XP-to-go on one line, the meter full width under them */
+  .rankline {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    row-gap: 6px;
+    max-width: none;
+  }
+  .rankline .dmeter {
+    order: 3;
+    flex: 1 1 100%;
+  }
+  .worlds {
+    justify-content: flex-start;
+  }
+  /* four even columns, tempo under the name */
+  .worlds ol {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+  }
+  .worlds li + li::before {
+    display: none;
+  }
+  .worlds a {
+    display: inline-block;
+    padding: 2px 0;
+    border-radius: 0;
+  }
+  .worlds a .tabular {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+  }
+}
+/* Train rows: meter and best score in fixed columns */
+.row-meter {
+  display: flex;
+  width: 72px;
+}
+.row-best {
+  width: 36px;
+  text-align: right;
+}
+/* on phones the drill name gets the width: the audio tag goes and the meter shrinks */
+@media (max-width: 560px) {
+  .skill-group .list-row .meta .tag {
+    display: none;
+  }
+  .row-meter {
+    width: 48px;
+  }
+}

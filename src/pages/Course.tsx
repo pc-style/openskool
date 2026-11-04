@@ -1,67 +1,132 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { currentWeek, missionDone, WEEKS } from '../lib/course'
+import { DMeter } from '../components/viz/meters'
+import { currentWeek, isDrillMission, MISSION_XP, missionBest, missionDone, missionId, missionLink, WEEKS } from '../lib/course'
+import { GENRES } from '../audio/synth'
 import { drillById } from '../lib/drills'
-import { best, toggleTask, useProgress } from '../lib/progress'
+import { toggleTask, useProgress } from '../lib/progress'
+import './shell.css'
 
 export function Course() {
   const s = useProgress()
   const cur = currentWeek(s)
   const [open, setOpen] = useState(cur.n)
+  // the week open on arrival appears as is; only weeks you open dissolve in
+  const [touched, setTouched] = useState(false)
   const total = WEEKS.reduce((n, w) => n + w.missions.length + w.practice.length, 0)
   const done = WEEKS.reduce((n, w) => n + w.missions.filter((m) => missionDone(s, m)).length + w.practice.filter((p) => s.tasks.includes(p.id)).length, 0)
   return (
     <div className="course">
       <h1>The course</h1>
       <p className="muted">
-        Eight weeks, from counting bars to recording a full mix. All weeks are open; missions are drill scores, practice tasks are for your own decks. {done}/{total} complete.
+        Eight weeks, from counting bars to recording a full mix. All weeks are open. Missions are drill scores or a step in the app, practice tasks are for your own decks.
       </p>
+      <div className="course-progress">
+        <DMeter value={done / total} label={`${done} of ${total} complete`} />
+        <span className="muted small tabular">
+          {done} of {total} complete
+        </span>
+      </div>
       <ol className="weeks">
         {WEEKS.map((w) => {
           const md = w.missions.filter((m) => missionDone(s, m)).length + w.practice.filter((p) => s.tasks.includes(p.id)).length
           const all = w.missions.length + w.practice.length
+          const isOpen = open === w.n
           return (
-            <li key={w.n} className={`week ${open === w.n ? 'open' : ''} ${md === all ? 'complete' : ''}`}>
-              <button className="week-head" onClick={() => setOpen(open === w.n ? 0 : w.n)} aria-expanded={open === w.n}>
+            <li key={w.n} className={`week ${isOpen ? 'open' : ''} ${md === all ? 'complete' : ''} ${w.n === cur.n ? 'current' : ''}`}>
+              <button className="week-head" onClick={() => {
+                  setTouched(true)
+                  setOpen(isOpen ? 0 : w.n)
+                }} aria-expanded={isOpen}>
                 <span className="wn">Week {w.n}</span>
-                <span className="wt">{w.title}</span>
-                <span className="wp">
-                  {md}/{all}
+                <span className="wt">
+                  {w.title}
+                  {w.n === cur.n && <span className="tag">Current</span>}
                 </span>
+                <span className="wp">
+                  <span className="wp-meter">
+                    <DMeter value={md / all} height={6} label={`${md} of ${all} done`} />
+                  </span>
+                  <span className="tabular">
+                    {md}/{all}
+                  </span>
+                </span>
+                <span className="chev" aria-hidden="true" />
               </button>
-              {open === w.n && (
-                <div className="week-body">
+              {isOpen && (
+                <div className={`week-body ${touched ? 'fade-in' : ''}`}>
                   <p className="goal">{w.goal}</p>
                   {w.lessons.map((l) => (
                     <div key={l.title} className="lesson">
                       <h3>{l.title}</h3>
                       <p>{l.body}</p>
+                      {l.link && (
+                        <p className="lesson-link">
+                          <Link to={l.link.to}>{l.link.text} →</Link>
+                        </p>
+                      )}
                     </div>
                   ))}
-                  <h3>Missions</h3>
+                  <div className="missions-head">
+                    <h3 className="label">Missions</h3>
+                    <span className="muted small tabular">
+                      +{MISSION_XP} XP each · {w.missions.filter((m) => missionDone(s, m)).length}/{w.missions.length} done{w.n === cur.n ? ' this week' : ''}
+                    </span>
+                  </div>
                   <ul className="missions">
                     {w.missions.map((m) => {
-                      const d = drillById(m.drill)!
                       const ok = missionDone(s, m)
+                      const mark = (
+                        <span className="mark" aria-label={ok ? 'Done' : 'To do'}>
+                          {ok ? '✓' : '○'}
+                        </span>
+                      )
+                      if (!isDrillMission(m))
+                        return (
+                          <li key={missionId(w, m)} className={`mission ${ok ? 'done' : ''}`}>
+                            {mark}
+                            <span className="mission-text">
+                              <b>{m.text}</b>
+                              <span className="muted"> · in the app</span>
+                            </span>
+                            <span className="mission-meter muted small">{ok ? 'Done' : 'Not yet'}</span>
+                            <Link to={m.to} className="button small">
+                              {ok ? 'Open' : 'Go'}
+                            </Link>
+                          </li>
+                        )
+                      const d = drillById(m.drill)!
+                      const b = missionBest(s, m)
                       return (
-                        <li key={m.drill + m.min} className={ok ? 'done' : ''}>
-                          <span>{ok ? '✓' : '○'}</span>
-                          <span>
-                            Score {m.min}+ in <b>{d.name}</b> <small className="muted">(best {best(s, m.drill) || '—'})</small>
+                        <li key={missionId(w, m)} className={`mission ${ok ? 'done' : ''}`}>
+                          {mark}
+                          <span className="mission-text">
+                            <b>{d.name}</b>
+                            <span className="muted">
+                              {' '}
+                              · score {m.min}+{m.genre && ` in ${GENRES[m.genre].name} ${GENRES[m.genre].bpm}`}
+                            </span>
                           </span>
-                          <Link to={`/train/${m.drill}`} className="button small">
-                            Play
+                          <span className="mission-meter">
+                            <DMeter value={b / m.min} height={6} color={ok ? 'green' : 'ink'} label={`Best ${b} of ${m.min}`} />
+                            <span className="muted small tabular">
+                              {b || '—'} / {m.min}
+                            </span>
+                          </span>
+                          <Link to={missionLink(m)} className="button small">
+                            {ok ? 'Again' : 'Play'}
                           </Link>
                         </li>
                       )
                     })}
                   </ul>
-                  <h3>Practice on your decks</h3>
-                  <ul className="missions">
+                  <h3 className="label">Practice on your decks</h3>
+                  <ul className="tasks">
                     {w.practice.map((p) => (
                       <li key={p.id} className={s.tasks.includes(p.id) ? 'done' : ''}>
                         <label>
-                          <input type="checkbox" checked={s.tasks.includes(p.id)} onChange={() => toggleTask(p.id)} /> {p.text}
+                          <input type="checkbox" checked={s.tasks.includes(p.id)} onChange={() => toggleTask(p.id)} />
+                          <span>{p.text}</span>
                         </label>
                       </li>
                     ))}

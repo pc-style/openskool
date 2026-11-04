@@ -1,0 +1,252 @@
+/* Gear Lab: a line drawing of a two-deck controller with clickable parts. */
+
+.gear-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 20px;
+  align-items: start;
+}
+.gear.quiz .gear-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* about the size it has next to the card, so the whole controller stays in view */
+.gear.quiz .gear-draw {
+  max-width: 820px;
+  width: 100%;
+  margin: 0 auto;
+}
+.gear-draw svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* the drawing: thin, flat, neutral */
+.gear svg * {
+  vector-effect: non-scaling-stroke;
+}
+.g-body {
+  fill: var(--background);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.g-sep {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.g-deck {
+  fill: var(--muted-foreground);
+  font: 500 13px var(--font-ui);
+  opacity: 0.7;
+}
+.gear .s {
+  fill: none;
+  stroke: var(--muted-foreground);
+  stroke-width: 1;
+  transition:
+    stroke 150ms var(--ease),
+    fill 150ms var(--ease);
+}
+.gear .s.faint {
+  stroke: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
+}
+.gear .s.fill {
+  fill: var(--card);
+}
+.gear .s.ink {
+  stroke: var(--foreground);
+  opacity: 0.75;
+}
+.gear .s.seg-lit {
+  fill: color-mix(in srgb, var(--muted-foreground) 30%, transparent);
+}
+.gear .cap,
+.gear .lbl {
+  font-family: var(--font-ui);
+  pointer-events: none;
+  user-select: none;
+}
+.gear .cap {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  fill: color-mix(in srgb, var(--foreground) 70%, var(--muted-foreground));
+}
+.gear .lbl {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  fill: color-mix(in srgb, var(--foreground) 55%, var(--muted-foreground));
+}
+
+/* parts: an invisible hit area that doubles as the focus ring */
+.part {
+  cursor: pointer;
+  outline: none;
+}
+.part .hit {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 1;
+  transition:
+    stroke 150ms var(--ease),
+    fill 150ms var(--ease);
+}
+.part:hover .hit {
+  fill: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.part:hover .s {
+  stroke: var(--foreground);
+}
+.part:focus-visible .hit {
+  stroke: var(--ring);
+  stroke-dasharray: 3 3;
+}
+.part.seen .lbl {
+  fill: var(--foreground);
+}
+
+/* selected (explore), or the target revealed (quiz): the one place lime appears */
+.part.sel .s,
+.part.target .s,
+.part.found .s {
+  stroke: var(--lime);
+}
+.part.sel .s.ink,
+.part.target .s.ink,
+.part.found .s.ink {
+  stroke: var(--lime);
+  opacity: 1;
+}
+.part.sel .s.faint,
+.part.target .s.faint,
+.part.found .s.faint {
+  stroke: color-mix(in srgb, var(--lime) 55%, transparent);
+}
+.part.sel .s:not(.faint):not(.ink):not(.open),
+.part.target .s:not(.faint):not(.ink):not(.open),
+.part.found .s:not(.faint):not(.ink):not(.open) {
+  fill: var(--lime-soft);
+}
+.part.sel .cap,
+.part.target .cap,
+.part.found .cap,
+.part.sel .lbl {
+  fill: var(--lime);
+}
+.part.sel .hit,
+.part.target .hit {
+  stroke: color-mix(in srgb, var(--lime) 45%, transparent);
+}
+.part.target .hit {
+  animation: gear-mark 1.4s var(--ease);
+}
+.part.wrong .s {
+  stroke: var(--bad);
+}
+.part.wrong .cap {
+  fill: var(--bad);
+}
+@keyframes gear-mark {
+  0%,
+  50% {
+    stroke: var(--lime);
+  }
+}
+
+/* the side card */
+.gear-card {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.gear-card > .swap {
+  flex: 1;
+}
+.gear-card h2 {
+  font-size: 1.1rem;
+  margin: 0 0 8px;
+}
+.gear-card p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+.gear-card p.muted:not(.small) {
+  font-size: 0.93rem;
+}
+.gear-hint {
+  margin-top: 4px;
+}
+.gear-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+/* the quiz header */
+.gear-quiz-head {
+  max-width: 680px;
+  margin: 0 auto 12px;
+}
+.gear-prompt {
+  margin: 4px 0 12px;
+  min-height: 1.5em;
+}
+.gear-clock {
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.gear-clock > span {
+  display: block;
+  height: 100%;
+  background: var(--muted-foreground);
+  transform-origin: left;
+  animation: gear-clock 6s linear forwards;
+}
+.gear-clock > span.stop {
+  animation-play-state: paused;
+}
+@keyframes gear-clock {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (max-width: 860px) {
+  .gear-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gear-card {
+    min-height: 0;
+  }
+}
+@media (max-width: 640px) {
+  /* give the drawing the stage's padding back, so the parts stay big enough to tap */
+  .gear .gear-draw,
+  .gear.quiz .gear-draw {
+    width: auto;
+    max-width: none;
+    margin: 0 -16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gear .s,
+  .part .hit {
+    transition: none;
+  }
+  .part.target .hit {
+    animation: none;
+  }
+  .gear-clock > span {
+    animation-timing-function: steps(6, end);
+  }
+}

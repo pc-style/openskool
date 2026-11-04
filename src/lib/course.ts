@@ -1,15 +1,31 @@
-import { best, type State } from './progress'
+import type { Genre } from '../audio/synth'
+import { best, bestIn, type State } from './progress'
 
-export interface Mission {
+/** A drill score to reach, optionally in one tempo world. */
+export interface DrillMission {
   drill: string
   min: number
+  genre?: Genre
 }
+/** Something done in the app, checked against `state.events`. */
+export interface EventMission {
+  event: 'library:tracks-ready' | 'decks:two-loaded'
+  /** What to do, e.g. "Load two tracks on the Decks". */
+  text: string
+  to: string
+}
+export type Mission = DrillMission | EventMission
+
+export const isDrillMission = (m: Mission): m is DrillMission => 'drill' in m
+
+/** XP for each finished mission. */
+export const MISSION_XP = 150
 
 export interface Week {
   n: number
   title: string
   goal: string
-  lessons: { title: string; body: string }[]
+  lessons: { title: string; body: string; link?: { to: string; text: string } }[]
   missions: Mission[]
   /** Away-from-the-app practice, ticked off by hand. */
   practice: { id: string; text: string }[]
@@ -38,6 +54,7 @@ export const WEEKS: Week[] = [
       { drill: 'downbeat', min: 600 },
       { drill: 'signal', min: 700 },
       { drill: 'sync', min: 700 },
+      { event: 'decks:two-loaded', text: 'Load a track on each deck in Decks', to: '/decks' },
     ],
     practice: [
       { id: 'w1-count', text: 'Put on any track and count bars out loud for a full minute without losing the 1.' },
@@ -61,11 +78,20 @@ export const WEEKS: Week[] = [
         title: 'Turn the BPM display off',
         body: 'Sync buttons and displays are fine tools, but a DJ who can only use them is lost the first time an analysis is wrong or a track has a live drummer. Practise with the numbers hidden.',
       },
+      {
+        title: 'Halftime and double-time',
+        body: 'A 174 BPM drum & bass track and an 87 BPM one share a grid: every second kick of the fast one lands on a kick of the slow one. Beatmatch to the grid, not to the feel. Lock the beats, then let the groove sit at half or double speed on top. The same trick takes you from 140 BPM dubstep (which feels like 70) into 140 techno.',
+      },
+      {
+        title: 'Key lock (Master Tempo)',
+        body: 'Pitch a track up and its key rises with it, like a record played fast. Key lock, called Master Tempo on Pioneer gear, changes tempo without changing key. Leave it on for small tempo moves so vocals do not chipmunk; past about 8% it starts to sound grainy, and that is a sign to pick a closer track.',
+      },
     ],
     missions: [
       { drill: 'sync', min: 800 },
       { drill: 'tempomatch', min: 600 },
       { drill: 'taptempo', min: 700 },
+      { drill: 'timefeel', min: 700 },
     ],
     practice: [
       { id: 'w2-nosync', text: 'Mix for 20 minutes with sync off and BPM displays covered.' },
@@ -114,6 +140,15 @@ export const WEEKS: Week[] = [
         title: 'Counting through breakdowns',
         body: 'When the drums vanish keep counting. You will know the drop is coming because you counted to it, not because you guessed from the riser.',
       },
+      {
+        title: 'Check the grid before you trust Sync',
+        body: 'Sync and phrase markers are only as good as the beat grid under them. If the analysis put the 1 on a 3, Sync will lock the beats and still land every phrase change half a bar wrong. Before a track goes in your crate, scroll to its first drop and check that a bar line sits on the kick.',
+        link: { to: '/library', text: 'Open the grid editor in Library' },
+      },
+      {
+        title: 'Cue points on intros and drops',
+        body: 'Set a cue on the first beat of the intro and another on the first beat of the main drop. The intro cue is where you start the track in a mix; the drop cue lets you check the loudest part in your headphones before it plays out loud, and gives you a clean point to jump to if you need to cut fast.',
+      },
     ],
     missions: [
       { drill: 'phrase', min: 700 },
@@ -136,14 +171,27 @@ export const WEEKS: Week[] = [
         body: 'Loop a clean 4 or 8-beat section of an outro when the next track needs longer to come in. Release the loop on a phrase boundary, never in the middle of a bar.',
       },
       {
-        title: 'Beat FX',
-        body: 'Echo and reverb are exit tools: throw an echo on the last beat of a phrase and pull the fader for a clean disappearance. Flanger and phaser are colour: short, on builds. If people notice the effect more than the music, it is too much.',
+        title: 'Halve the loop into a drop',
+        body: 'A build you make yourself: loop 8 beats, then halve it to 4, 2 and 1 beat, one step per bar, so the repeats speed up like a snare roll. Release on the 1 of the next phrase and the drop lands. Count it: the last halving has to finish exactly on a bar line.',
+      },
+      {
+        title: 'Beat FX and colour FX',
+        body: 'Beat FX (echo, delay, roll, trans) are timed to the tempo and set in beats: ½, ¾, 1. Colour FX (filter, noise, space) sit on one knob per channel and have no timing. Echo and reverb are exit tools: throw an echo on the last beat of a phrase and pull the fader for a clean disappearance. Flanger and phaser are colour: short, on builds. If people notice the effect more than the music, it is too much.',
+      },
+      {
+        title: 'Faster tempos',
+        body: 'Everything you can do at 124 gets harder at 134 and much harder at 145 or 185: a beat is shorter, so a flam is fewer milliseconds and a drift runs away sooner. Move up one tempo world at a time once the slower one feels easy. The drills pay more XP the faster you go.',
+      },
+      {
+        title: 'Which way the filter knob turns',
+        body: 'On most mixers the filter is one knob, flat in the middle. Turn it left and it becomes a low-pass: the highs go and the track sounds muffled. Turn it right and it becomes a high-pass: the bass goes and the track thins out. Left to sink a track into the background, right to take its weight away before it leaves.',
       },
     ],
     missions: [
       { drill: 'filter', min: 800 },
       { drill: 'loops', min: 700 },
       { drill: 'fx', min: 700 },
+      { drill: 'sync', min: 700, genre: 'techno' },
     ],
     practice: [{ id: 'w5-exit', text: 'Practise an echo-out exit ten times until the echo lands on the beat every time.' }],
   },
@@ -180,10 +228,18 @@ export const WEEKS: Week[] = [
         title: 'Know your room',
         body: 'Opening slot? Do not play the headliner\'s bangers. Your job is to make the room ready, not to empty the crate. Prepare more tracks than you need and read the floor.',
       },
+      {
+        title: 'How many tracks an hour',
+        body: 'With full blends most club sets run 12 to 16 tracks an hour, about four minutes each. For a one-hour set prepare around 20, so you can swap one out when the floor tells you to without leaving your plan.',
+      },
+      {
+        title: 'Two ways out of the peak',
+        body: 'Before you play your biggest track, know what comes after it. Have two routes ready: one that holds the energy (same tempo, compatible key, a harder groove) and one that lets the room breathe (a stripped-back track or a drop of a few BPM). Pick on the night, from how the floor reacts.',
+      },
     ],
     missions: [
       { drill: 'setbuilder', min: 750 },
-      { drill: 'tempomatch', min: 800 },
+      { drill: 'tempomatch', min: 700, genre: 'psy' },
       { drill: 'bpmmath', min: 800 },
     ],
     practice: [{ id: 'w7-plan', text: 'Plan a 1-hour set on paper with BPM, key and an energy curve, then play it.' }],
@@ -206,6 +262,7 @@ export const WEEKS: Week[] = [
       { drill: 'vocab', min: 700 },
       { drill: 'phrase', min: 850 },
       { drill: 'eq', min: 850 },
+      { drill: 'downbeat', min: 700, genre: 'hitech' },
     ],
     practice: [
       { id: 'w8-record', text: 'Record your 45–60 minute final mix.' },
@@ -214,8 +271,12 @@ export const WEEKS: Week[] = [
   },
 ]
 
-export const missionId = (w: Week, m: Mission) => `w${w.n}:${m.drill}:${m.min}`
-export const missionDone = (s: State, m: Mission) => best(s, m.drill) >= m.min
+export const missionId = (w: Week, m: Mission) => (isDrillMission(m) ? `w${w.n}:${m.drill}:${m.min}${m.genre ? `:${m.genre}` : ''}` : `w${w.n}:${m.event}`)
+/** Best score that counts for a drill mission: in its world if it names one. */
+export const missionBest = (s: State, m: DrillMission) => (m.genre ? bestIn(s, m.drill, m.genre) : best(s, m.drill))
+export const missionDone = (s: State, m: Mission) => (isDrillMission(m) ? missionBest(s, m) >= m.min : s.events.includes(m.event))
+/** Link to a drill mission, preselecting its world. */
+export const missionLink = (m: DrillMission) => `/train/${m.drill}${m.genre ? `?genre=${m.genre}` : ''}`
 
 export function missionsDone(s: State): number {
   let n = 0

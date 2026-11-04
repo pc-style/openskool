@@ -1,0 +1,45 @@
+{
+  "id": "/",
+  "name": "openskool",
+  "short_name": "openskool",
+  "description": "Open-source DJ ear training: drills on your own tracks, an 8-week course and a local practice coach.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Train", "url": "/#/train", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Decks", "url": "/#/decks", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Library", "url": "/#/library", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ],
+  "share_target": {
+    "action": "/library",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "files": [{ "name": "audio", "accept": ["audio/*", ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".aif", ".aiff", ".opus"] }]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/library",
+      "accept": {
+        "audio/mpeg": [".mp3"],
+        "audio/wav": [".wav"],
+        "audio/flac": [".flac"],
+        "audio/ogg": [".ogg", ".opus"],
+        "audio/mp4": [".m4a"],
+        "audio/aac": [".aac"],
+        "audio/aiff": [".aif", ".aiff"]
+      }
+    }
+  ]
+}

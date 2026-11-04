@@ -1,0 +1,163 @@
+/* Live tap rating on the tap pad, and the grade tally on timing results. */
+
+.tappad .tap-rating {
+  min-height: 1.5em;
+  font-size: 0.95rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.tappad .tap-rating > .swap-ghost {
+  inset: 0 0 auto 0;
+}
+.tap-grade b {
+  font-weight: 600;
+}
+.tap-grade span {
+  color: var(--muted-foreground);
+}
+.tap-grade.perfect b {
+  color: var(--good);
+}
+.tap-grade.close b {
+  color: var(--muted-foreground);
+}
+.tap-grade.off b,
+.tap-grade.miss b {
+  color: var(--bad);
+}
+.tappad[aria-disabled='true'] {
+  cursor: default;
+}
+
+.tally {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+.tally b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+/* Round verdict: the verdict, then the numbers, then a muted tip. */
+.verdict {
+  max-width: 60ch;
+  margin: 20px auto 4px;
+  text-align: center;
+}
+.verdict p {
+  margin: 0 0 8px;
+}
+.verdict .verdict-line {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+.verdict strong {
+  font-weight: 600;
+}
+.verdict .tone-good {
+  color: var(--good);
+}
+.verdict .tone-bad {
+  color: var(--bad);
+}
+
+/* Pad label dims while taps are still ignored. */
+.tappad > span:first-child {
+  transition: opacity var(--dur) var(--ease);
+}
+.tappad[aria-disabled='true'] > span:first-child {
+  opacity: 0.55;
+}
+
+/* One dot per scored bar in Downbeat Tapper, filled by grade. */
+.grade-dots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 14px 0 4px;
+}
+.grade-dots p {
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.grade-dots .dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.grade-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.grade-dots .dot.perfect {
+  background: var(--good);
+  border-color: var(--good);
+}
+.grade-dots .dot.good {
+  background: var(--muted-foreground);
+  border-color: var(--muted-foreground);
+}
+.grade-dots .dot.close {
+  border-color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--muted-foreground) 35%, transparent);
+}
+.grade-dots .dot.off {
+  border-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 35%, transparent);
+}
+.grade-dots .dot.miss {
+  border-color: var(--bad);
+}
+
+.tt-count {
+  margin: 8px 0 0;
+}
+
+/* Tempo Match: live phase of deck B against deck A, ±half a beat. */
+.phase-meter {
+  margin: 4px 0 16px;
+}
+.phase-track {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--surface-2);
+}
+.phase-centre {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--ring);
+}
+.phase-marker {
+  position: absolute;
+  top: 2px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: var(--lime);
+  opacity: 0;
+}
+.phase-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.phase-readout {
+  color: var(--foreground);
+}

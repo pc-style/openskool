@@ -3,9 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-maskable-512.png" />
+    <meta name="theme-color" content="#f7f5f0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#050505" media="(prefers-color-scheme: dark)" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>openskool · ear training for DJs</title>
     <meta name="description" content="Open-source DJ ear training: drills on your own tracks, an 8-week course and a local practice coach." />
+    <script>
+      // apply the saved appearance and motion setting before first paint, so there is no flash
+      try {
+        var s = JSON.parse(localStorage.getItem('openskool:v1') || '{}').settings || {}
+        var t = s.theme || 'system'
+        var m = s.motion || 'system'
+        var c = document.documentElement.classList
+        if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) c.add('dark')
+        if (m === 'reduced' || (m === 'system' && matchMedia('(prefers-reduced-motion: reduce)').matches)) c.add('reduce-motion')
+        if (m === 'full') c.add('full-motion')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

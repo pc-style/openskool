@@ -1,7 +1,31 @@
 {
   "name": "openskool",
   "version": "0.1.0",
+  "private": true,
+  "description": "Open-source ear training for DJs. Bring your own songs.",
+  "keywords": [
+    "dj",
+    "ear-training",
+    "beatmatching",
+    "music",
+    "web-audio",
+    "pwa",
+    "local-first"
+  ],
+  "homepage": "https://github.com/pc-style/openskool#readme",
+  "bugs": {
+    "url": "https://github.com/pc-style/openskool/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pc-style/openskool.git"
+  },
+  "license": "MIT",
+  "author": "Adam Krupa",
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -10,21 +34,23 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
     "idb-keyval": "^6.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.5"
+    "react-router-dom": "^7.18.5",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.4",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.89.0",
+    "tailwindcss": "^4.3.4",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.1.0"
-  },
-  "description": "Open-source ear training for DJs. Bring your own songs.",
-  "license": "MIT"
+  }
 }

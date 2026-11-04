@@ -30,13 +30,13 @@ export function groove(genre: Genre, seed: number, feel: Feel = 'standard', bars
   return grooves.get(key)!
 }
 
-export async function builtinClip(genre: Genre, seed = 1 + Math.floor(Math.random() * 3)): Promise<Clip> {
-  const buffer = await groove(genre, seed)
+export async function builtinClip(genre: Genre, seed = 1 + Math.floor(Math.random() * 3), bpm?: number): Promise<Clip> {
+  const buffer = await groove(genre, seed, 'standard', 32, bpm)
   return {
-    id: `builtin:${genre}:${seed}`,
+    id: `builtin:${genre}:${seed}${bpm ? `@${bpm}` : ''}`,
     name: `${GENRES[genre].name} groove ${seed}`,
     buffer,
-    bpm: GENRES[genre].bpm,
+    bpm: bpm ?? GENRES[genre].bpm,
     anchor: 0,
     source: 'builtin',
     genre,
@@ -63,6 +63,22 @@ export async function getClip(pref: SourcePref, exclude?: string): Promise<Clip>
   }
   const seeds = [1, 2, 3].filter((s) => `builtin:${pref.genre}:${s}` !== exclude)
   return builtinClip(pref.genre, seeds[Math.floor(Math.random() * seeds.length)])
+}
+
+// the built-in genre whose sound sits furthest from each, so two decks never sound alike
+const CONTRAST: Record<Genre, Genre> = { house: 'techno', techno: 'house', psy: 'house', hitech: 'techno' }
+
+// the built-in genre closest to a tempo, as a stand-in for the style of one of your tracks
+const nearestGenre = (bpm: number) =>
+  (Object.keys(GENRES) as Genre[]).reduce((g, h) => (Math.abs(GENRES[h].bpm - bpm) < Math.abs(GENRES[g].bpm - bpm) ? h : g))
+
+/**
+ * A second deck that never plays the same audio as `a`: another of your tracks when you have two or
+ * more, otherwise a built-in groove from a contrasting genre rendered at a's tempo.
+ */
+export async function partnerClip(pref: SourcePref, a: Clip): Promise<Clip> {
+  if (pref.kind === 'mine' && readyTracks().length > 1) return getClip(pref, a.id)
+  return builtinClip(CONTRAST[a.genre ?? nearestGenre(a.bpm)], 1 + Math.floor(Math.random() * 3), a.bpm)
 }
 
 export const beatLen = (c: Clip) => 60 / c.bpm

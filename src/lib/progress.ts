@@ -1,6 +1,7 @@
 // Local-first progress: everything lives in localStorage and can be exported as JSON.
 import { useSyncExternalStore } from 'react'
 import type { Genre } from '../audio/synth'
+import { hasWorlds } from './drills'
 
 export type SourceKind = 'mine' | 'builtin'
 
@@ -10,19 +11,38 @@ export interface Result {
   at: number
   source: SourceKind
   genre?: Genre
+  /** Optional per-run detail reported by the drill. */
+  right?: number
+  total?: number
+  bestStreak?: number
+  /** Perfect / Good / Close / Off / Miss counts for tap drills (Close since the wider windows). */
+  grades?: { perfect: number; good: number; close?: number; off: number; miss: number }
+  /** True for the first run of the day's daily drill (pays double XP). */
+  daily?: boolean
 }
 
+export type Theme = 'system' | 'light' | 'dark'
+export type Motion = 'system' | 'reduced' | 'full'
+
 export interface Settings {
+  theme: Theme
   latencyMs: number
   source: SourceKind
   genre: Genre
   name: string
+  motion: Motion
+  /** Vibrate on taps in the tap drills, where the device supports it. */
+  haptics: boolean
 }
 
 export interface State {
   version: 1
   results: Result[]
   tasks: string[]
+  /** Vocab terms the learner marked as known in study mode. */
+  known: string[]
+  /** App events that missions can check, e.g. 'decks:two-loaded'. */
+  events: string[]
   settings: Settings
 }
 
@@ -32,7 +52,9 @@ const fresh = (): State => ({
   version: 1,
   results: [],
   tasks: [],
-  settings: { latencyMs: 0, source: 'builtin', genre: 'house', name: '' },
+  known: [],
+  events: [],
+  settings: { theme: 'system', latencyMs: 0, source: 'builtin', genre: 'house', name: '', motion: 'system', haptics: true },
 })
 
 function load(): State {
@@ -81,6 +103,15 @@ export function toggleTask(id: string) {
   set({ ...state, tasks })
 }
 
+export function setKnown(term: string, on: boolean) {
+  const known = on ? [...new Set([...state.known, term])] : state.known.filter((t) => t !== term)
+  set({ ...state, known })
+}
+
+export function recordEvent(id: string) {
+  if (!state.events.includes(id)) set({ ...state, events: [...state.events, id] })
+}
+
 export function importState(json: string) {
   const s = JSON.parse(json) as State
   if (s.version !== 1 || !Array.isArray(s.results)) throw new Error('Not an openskool progress file')
@@ -103,18 +134,55 @@ export function plays(s: State, drill: string): Result[] {
   return s.results.filter((r) => r.drill === drill)
 }
 
-/** XP: score/10 per run, +50 for the first run of each drill, plus missions and practice tasks. */
+/** Best score in one world (a built-in genre) or on your own tracks. */
+export function bestIn(s: State, drill: string, where: Genre | 'mine'): number {
+  let b = 0
+  for (const r of s.results) {
+    if (r.drill !== drill || r.score <= b) continue
+    if (where === 'mine' ? r.source === 'mine' : r.source === 'builtin' && (r.genre ?? 'house') === where) b = r.score
+  }
+  return b
+}
+
+/**
+ * Tempo worlds: the built-in genres, slowest to fastest. Faster is harder, so it pays more XP.
+ * Nothing is locked; `xp` is when a world is recommended.
+ */
+export const WORLDS: { genre: Genre; xp: number; mult: number }[] = [
+  { genre: 'house', xp: 0, mult: 1 },
+  { genre: 'techno', xp: 1500, mult: 1.25 },
+  { genre: 'psy', xp: 4000, mult: 1.5 },
+  { genre: 'hitech', xp: 8000, mult: 2 },
+]
+
+/** XP multiplier for a run: its world's, or 1× for your own tracks and no-audio drills. */
+export const worldMult = (r: Pick<Result, 'drill' | 'source' | 'genre'>) =>
+  r.source === 'builtin' && r.genre && hasWorlds(r.drill) ? (WORLDS.find((w) => w.genre === r.genre)?.mult ?? 1) : 1
+
+/** The fastest world recommended at this XP, and the next one with the XP still needed. */
+export function worldAt(xp: number) {
+  let i = 0
+  while (i + 1 < WORLDS.length && xp >= WORLDS[i + 1].xp) i++
+  return { current: WORLDS[i], index: i, next: WORLDS[i + 1] }
+}
+
+/** XP for a run's score: score/10 times the world's multiplier, doubled for the first run of the day's daily drill. */
+export const scoreXp = (r: Pick<Result, 'drill' | 'score' | 'daily' | 'source' | 'genre'>) => Math.round((r.score / 10) * worldMult(r)) * (r.daily ? 2 : 1)
+export const FIRST_PLAY_XP = 50
+export const TASK_XP = 50
+
+/** XP: score/10 per run (times the tempo world's multiplier, 2× for the daily drill), +50 for the first run of each drill, plus missions and practice tasks. */
 export function xpOf(s: State, missionsDone: number): number {
   const seen = new Set<string>()
   let xp = 0
   for (const r of s.results) {
-    xp += Math.round(r.score / 10)
+    xp += scoreXp(r)
     if (!seen.has(r.drill)) {
       seen.add(r.drill)
-      xp += 50
+      xp += FIRST_PLAY_XP
     }
   }
-  return xp + missionsDone * 150 + s.tasks.length * 50
+  return xp + missionsDone * 150 + s.tasks.length * TASK_XP
 }
 
 export const RANKS = [
@@ -148,4 +216,20 @@ export function streak(s: State, now = Date.now()): number {
     d.setDate(d.getDate() - 1)
   }
   return n
+}
+
+/** The longest run of consecutive days with at least one result, ever. */
+export function longestStreak(s: State): number {
+  const days = [...new Set(s.results.map((r) => dayKey(r.at)))].sort()
+  let bestRun = 0
+  let run = 0
+  let prev = ''
+  for (const k of days) {
+    const d = new Date(`${k}T12:00:00`)
+    d.setDate(d.getDate() - 1)
+    run = prev === dayKey(d.getTime()) ? run + 1 : 1
+    bestRun = Math.max(bestRun, run)
+    prev = k
+  }
+  return bestRun
 }

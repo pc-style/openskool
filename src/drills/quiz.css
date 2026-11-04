@@ -1,0 +1,160 @@
+/* Vocab study cards and the Set Builder's crate → set layout. */
+
+/* ---------- vocab study ---------- */
+
+.study {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.flashcard {
+  width: 100%;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  text-align: center;
+  padding: 24px 28px;
+  border-radius: 10px;
+  background: var(--card);
+  white-space: normal;
+}
+.flashcard:hover:not(:disabled) {
+  background: var(--card);
+  border-color: var(--ring);
+}
+.flashcard > .swap > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.flash-side {
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+.flash-term {
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.flash-def {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  max-width: 40ch;
+  text-wrap: pretty;
+}
+.flash-known {
+  font-size: 0.78rem;
+  color: var(--lime);
+}
+.study-hint {
+  margin: 10px 0 0;
+}
+.study-actions {
+  justify-content: center;
+}
+.study-start {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  text-align: center;
+}
+
+/* ---------- set builder ---------- */
+
+.setbuilder .drill-meta {
+  margin-bottom: 4px;
+}
+.sb-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.setbuilder h3 {
+  font-size: 0.87rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  margin: 8px 0 8px;
+}
+.setbuilder .set {
+  margin: 0;
+}
+.setbuilder .set li + li,
+.sb-crate li + li {
+  margin-top: 6px;
+}
+.setbuilder .set-row {
+  padding: 6px 10px;
+  min-width: 0;
+}
+.setbuilder .set-row .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-crate {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+button.set-row {
+  width: 100%;
+  box-shadow: none;
+  text-align: left;
+}
+button.set-row:hover:not(:disabled) {
+  background: var(--hover);
+}
+.sb-fixed {
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+}
+.setbuilder .energy {
+  background: var(--muted);
+  flex: none;
+}
+.setbuilder .energy i {
+  display: block;
+  height: 100%;
+  background: var(--muted-foreground);
+}
+.sb-result {
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.sb-result h3:first-child {
+  font-size: 1.05rem;
+  color: var(--foreground);
+}
+.set-notes {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 16px;
+  font-size: 0.87rem;
+  font-variant-numeric: tabular-nums;
+}
+.set-notes li + li {
+  margin-top: 2px;
+}
+.note-bad {
+  color: var(--bad);
+}
+
+@media (max-width: 640px) {
+  .sb-cols {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .flashcard {
+    min-height: 180px;
+    padding: 20px;
+  }
+}

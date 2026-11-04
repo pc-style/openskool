@@ -15,6 +15,10 @@ export interface DrillMeta {
   teach: string[]
   /** Your-track requirement beyond a grid. */
   needs?: string
+  /** Plays two decks at once; deck B comes from another of your tracks or a contrasting built-in groove. */
+  decks?: 2
+  /** Shown instead of the audio picker when the drill chooses its own audio. */
+  audioNote?: string
 }
 
 export const DRILLS: DrillMeta[] = [
@@ -23,11 +27,11 @@ export const DRILLS: DrillMeta[] = [
     name: 'Feel the Time',
     blurb: 'Halftime, standard or double-time against the grid?',
     skill: 'Rhythm & time',
-    audio: 'mine',
+    audio: 'builtin',
     teach: [
-      'A click marks the grid. Decide how the music moves against it.',
-      'Standard: the kick lands on every click. Halftime: the music breathes at half the click rate (snare on 3, not 2 and 4). Double-time: twice as many hits as clicks.',
-      'This is how 87 BPM and 174 BPM tracks mix together, and why a 140 dubstep track can sit on a 70 BPM grid.',
+      'A click marks the grid at the genre\'s tempo. The built-in groove is reprogrammed over it; decide how it moves against the click.',
+      'Standard: the kick lands on every click. Halftime: the music breathes at half the click rate (kick on 1 and the "and" of 3, clap on 3, not 2 and 4). Double-time: two kicks for every click, claps in between.',
+      'This is how 87 BPM and 174 BPM tracks mix together, and why 140 BPM dubstep feels like 70.',
     ],
   },
   {
@@ -61,10 +65,11 @@ export const DRILLS: DrillMeta[] = [
     skill: 'Beatmatching',
     audio: 'mine',
     teach: [
-      'Deck A plays, then deck B comes in on top. If both kicks land together you hear one solid kick.',
-      'Rushing: B lands a hair early, you hear a flam with B in front. Dragging: B lands late, a galloping "ka-boom".',
-      'Rounds get harder: the offset shrinks from 60 ms to 12 ms.',
+      'Deck A plays in your left ear; after one bar deck B comes in on top in your right ear. If both kicks land together you hear one solid kick.',
+      'Rushing: B lands a hair early, you hear a flam that starts on the right. Dragging: B lands late, a galloping "ka-boom" that ends on the right.',
+      'Six rounds, and the offset shrinks from 60 ms to 12 ms. Deck B is another of your tracks, or a contrasting built-in groove at A\'s tempo.',
     ],
+    decks: 2,
   },
   {
     id: 'tempomatch',
@@ -77,6 +82,7 @@ export const DRILLS: DrillMeta[] = [
       'If B keeps creeping ahead it is too fast; if it falls behind it is too slow. Nudge to fix the phase, pitch to fix the speed.',
       'Hit Lock it when you think they match. Scored on the tempo error and how long it took. No BPM display: ears only.',
     ],
+    decks: 2,
   },
   {
     id: 'taptempo',
@@ -123,7 +129,7 @@ export const DRILLS: DrillMeta[] = [
     audio: 'mine',
     teach: [
       'Low (below ~200 Hz) is kick and bass weight. Mid (~200 Hz–3 kHz) is vocals, synths, snare body. High (above ~3.5 kHz) is hats, air and sparkle.',
-      'The music plays full for two bars, then one band drops. Later rounds cut less, so it gets subtle.',
+      'The music plays full for two bars, then the EQ moves. Six rounds in three stages: first name the band that was killed; then tell a full kill from a partial cut; then two bands drop and you name the one left standing.',
     ],
   },
   {
@@ -135,7 +141,7 @@ export const DRILLS: DrillMeta[] = [
     teach: [
       'Low-pass removes highs: the music goes muffled and dark, like hearing the club from the toilets.',
       'High-pass removes lows: the music thins out and loses its kick, like a phone speaker.',
-      'Sometimes nothing happens. Do not invent a sweep.',
+      'One bar plays still, the sweep runs over bars 2 and 3, then it holds. Six rounds in three stages: low-pass, high-pass or nothing (sometimes nothing happens, do not invent a sweep); then is the filter closing in or opening out; then is it a plain or a resonant filter, the resonant one whistling at the cutoff.',
     ],
   },
   {
@@ -146,7 +152,8 @@ export const DRILLS: DrillMeta[] = [
     audio: 'mine',
     teach: [
       'Before you bring a track in, match its gain to what is playing. A louder track always sounds "better", which fools you during a mix.',
-      'The difference starts at 6 dB and shrinks to 1 dB.',
+      'The same bar plays eight times without a break, A and B taking turns; the lights show which deck is playing. The difference starts at 6 dB and shrinks to 1 dB.',
+      'From round 4 there is a third answer: matched, when both play at the same level.',
     ],
   },
   {
@@ -158,17 +165,20 @@ export const DRILLS: DrillMeta[] = [
     teach: [
       'Two kick-and-bass lines on top of each other make the low end muddy and boomy, and it pumps the limiter.',
       'The fix is the bass swap: cut the incoming low, then swap lows on a phrase.',
-      'You hear two versions of the same blend. Pick the one where both basses play.',
+      'Deck A plays in your left ear, deck B in your right. First you hear two versions of the same blend: pick the one where both basses play.',
+      'From round 4 there is one blend with one low cut: say whose bass is carrying it. Deck B is another of your tracks, or a contrasting built-in groove at A\'s tempo.',
     ],
+    decks: 2,
   },
   {
     id: 'loops',
     name: 'Loop Lab',
-    blurb: 'A loop engages: 1, 2, 4 or 8 beats?',
+    blurb: 'A loop engages: how many beats long?',
     skill: 'FX & loops',
     audio: 'mine',
     teach: [
-      'Count the beats between repeats. 1-beat loops stutter, 2 beats bounce, 4 beats repeat a bar, 8 beats repeat two bars.',
+      'Two bars play, then a loop engages on the bar line. A quiet bell rings a different note on each beat, so count the notes that repeat. 1-beat loops stutter, 2 beats bounce, 4 beats repeat a bar, 8 beats repeat two bars.',
+      'The first four rounds are 1, 2, 4 or 8 beats. Then the loops get shorter: ½, 1, 2 or 4 beats, where ½ is a fast roll.',
       'Loops are how you extend an intro or outro when the next track is not ready.',
     ],
   },
@@ -180,7 +190,7 @@ export const DRILLS: DrillMeta[] = [
     audio: 'mine',
     teach: [
       'Echo repeats the sound in time with the beat. Reverb smears it into a room. Flanger is a jet-plane whoosh. Phaser is a softer, swirling notch.',
-      'The effect comes in after one bar dry.',
+      'The effect comes in after one bar dry. From round 5 there is a fifth option, trans: a gate that chops the sound on and off in time.',
     ],
   },
   {
@@ -192,7 +202,9 @@ export const DRILLS: DrillMeta[] = [
     teach: [
       'Tempo is a clue but not the whole story. Listen to the bass pattern: offbeat bounce (house), rumble (techno), rolling 16ths (psy, hi-tech).',
       'Each round plays a short built-in groove; after you answer you get the defining features.',
+      'Each groove plays at a random tempo inside its genre\'s range: house 120–128, techno 128–138, psy 140–148, hi-tech 175–190. The last two rounds play every genre at 140 BPM, so only the groove gives it away.',
     ],
+    audioNote: 'Every round picks one of the four built-in genres.',
   },
   {
     id: 'camelot',
@@ -235,6 +247,23 @@ export const DRILLS: DrillMeta[] = [
       'Then: the steps of a clean blend, from cueing in headphones to swapping the bass.',
     ],
   },
+  {
+    id: 'gear',
+    name: 'Gear Lab',
+    blurb: 'Learn every knob and button on a two-deck controller, then find them against the clock.',
+    skill: 'Words & routines',
+    audio: 'none',
+    teach: [
+      'Explore a generic two-deck controller: pick any part to see what it does and one way it helps a mix.',
+      'Then take the quiz: 10 parts, about 6 seconds each, labels hidden. Faster finds score more.',
+    ],
+  },
 ]
 
 export const drillById = (id: string) => DRILLS.find((d) => d.id === id)
+
+/** Whether a drill plays the genre you pick, so it has tempo worlds. */
+export const hasWorlds = (id: string) => {
+  const d = drillById(id)
+  return !!d && d.audio !== 'none' && !d.audioNote
+}

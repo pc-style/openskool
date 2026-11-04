@@ -3,6 +3,7 @@ import { del, get, set as idbSet } from 'idb-keyval'
 import { useSyncExternalStore } from 'react'
 import type { Analysis } from '../audio/analyze'
 import { ac } from '../audio/engine'
+import { recordEvent } from './progress'
 
 export interface TrackMeta {
   id: string
@@ -17,20 +18,28 @@ export interface TrackMeta {
 }
 
 let tracks: TrackMeta[] = []
-let loaded = false
+let loading: Promise<void> | null = null
 const subs = new Set<() => void>()
+
+function changed() {
+  // a course mission waits for two analysed tracks
+  if (readyTracks().length >= 2) recordEvent('library:tracks-ready')
+  for (const s of subs) s()
+}
 
 function emit(next: TrackMeta[]) {
   tracks = next
   void idbSet('tracks', tracks.filter((t) => t.status !== 'analysing'))
-  for (const s of subs) s()
+  changed()
 }
 
-export async function loadLibrary() {
-  if (loaded) return
-  loaded = true
-  tracks = ((await get('tracks')) as TrackMeta[] | undefined) ?? []
-  for (const s of subs) s()
+/** Loads the saved track list once; every caller waits for the same load. */
+export function loadLibrary(): Promise<void> {
+  loading ??= (async () => {
+    tracks = ((await get('tracks')) as TrackMeta[] | undefined) ?? []
+    changed()
+  })()
+  return loading
 }
 
 export const getTracks = () => tracks
@@ -81,6 +90,8 @@ function analyseInWorker(buf: AudioBuffer): Promise<Analysis> {
 }
 
 export async function addFiles(files: File[]) {
+  // adding before the saved list has loaded would drop the saved tracks
+  await loadLibrary()
   for (const f of files) {
     if (!f.type.startsWith('audio/') && !/\.(mp3|wav|flac|ogg|m4a|aac|aiff?|opus|webm)$/i.test(f.name)) continue
     const id = crypto.randomUUID()
@@ -114,4 +125,26 @@ export async function removeTrack(id: string) {
   await del(`file:${id}`)
   cache.delete(id)
   emit(tracks.filter((t) => t.id !== id))
+}
+
+/** Where public/sw.js keeps audio shared to the installed app until the Library picks it up. */
+const SHARE_CACHE = 'openskool-share'
+let importing: Promise<void> | null = null
+
+/** Moves audio files shared to the installed app (Web Share Target) into the library. */
+export function importShared(): Promise<void> {
+  if (typeof caches === 'undefined') return Promise.resolve()
+  importing ??= (async () => {
+    const cache = await caches.open(SHARE_CACHE)
+    const files: File[] = []
+    for (const req of await cache.keys()) {
+      const res = await cache.match(req)
+      await cache.delete(req)
+      if (!res) continue
+      const blob = await res.blob()
+      files.push(new File([blob], decodeURIComponent(res.headers.get('x-filename') ?? 'Shared track'), { type: blob.type }))
+    }
+    if (files.length) void addFiles(files)
+  })().finally(() => (importing = null))
+  return importing
 }

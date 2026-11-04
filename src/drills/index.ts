@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import type { DrillProps } from './common'
 import { BassClash, EqDetective, FilterSweep, FxSpotter, GainMatch, GenreId, LoopLab, SyncCheck, TimeFeel } from './ear'
+import { GearLab } from './gear'
 import { BpmMath, Camelot, SetBuilder, SignalFlow, Vocab } from './quiz'
 import { DownbeatTapper, DropTiming, PhraseIn, TapTempo, TempoMatch } from './timing'
 
@@ -24,4 +25,5 @@ export const DRILL_COMPONENTS: Record<string, ComponentType<DrillProps>> = {
   setbuilder: SetBuilder,
   vocab: Vocab,
   signal: SignalFlow,
+  gear: GearLab,
 }
