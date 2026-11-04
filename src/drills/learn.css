@@ -1,0 +1,363 @@
+/* Learn steps before the knowledge quizzes. Quiet: weight and spacing, neutral tokens, lime only for selection. */
+
+.learn {
+  max-width: 680px;
+  margin: 0 auto;
+  min-width: 0;
+}
+.learn-lead {
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+.learn-rules {
+  list-style: decimal;
+  margin: 0 0 24px;
+  padding-left: 1.4em;
+  line-height: 1.55;
+}
+.learn-rules li + li {
+  margin-top: 8px;
+}
+.learn-rules li::marker {
+  color: var(--muted-foreground);
+}
+.learn-rules strong {
+  font-weight: 500;
+}
+.learn-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+.learn-note {
+  margin: 12px 0 0;
+  text-wrap: pretty;
+}
+.learn-modes {
+  margin: 0 0 16px;
+}
+.learn-foot {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.learn-foot p {
+  max-width: 52ch;
+  margin: 0 auto 12px;
+  text-wrap: pretty;
+}
+
+/* continuous input: values update in place without the dissolve */
+.learn-instant .swap-ghost {
+  display: none;
+}
+.learn-instant .swap-enter {
+  animation: none;
+}
+
+/* ---------- BPM calculator ---------- */
+
+.tempo-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.tempo-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+  margin-bottom: 12px;
+}
+.tempo-in {
+  display: grid;
+  grid-template-columns: auto 84px;
+  grid-template-rows: auto auto;
+  gap: 6px 10px;
+  align-items: center;
+  min-width: 0;
+}
+.tempo-in label {
+  font-size: 0.87rem;
+  color: var(--muted-foreground);
+}
+.tempo-in input[type='number'] {
+  width: 84px;
+  font-variant-numeric: tabular-nums;
+}
+.tempo-in input[type='range'] {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+.tempo-head .tempo-in {
+  flex: 1 1 220px;
+  max-width: 300px;
+}
+.calc {
+  border-top: 1px solid var(--border);
+}
+.calc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 7rem) minmax(0, 1fr);
+  gap: 2px 12px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.calc-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.calc-label {
+  color: var(--muted-foreground);
+}
+.calc-v {
+  font-weight: 500;
+  text-align: right;
+}
+.calc-f {
+  min-width: 0;
+}
+
+/* ---------- Camelot ---------- */
+
+.cam-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+.cam-cols .viz {
+  margin: 0;
+  width: 100%;
+}
+.cam-panel {
+  min-width: 0;
+}
+.cam-moves {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.cam-moves li {
+  display: flex;
+  gap: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--border);
+}
+.cam-code {
+  width: 2.6em;
+  flex: none;
+  font-weight: 500;
+}
+.cam-boost .cam-code {
+  text-decoration: underline dashed var(--muted-foreground);
+  text-underline-offset: 3px;
+}
+.cam-yes {
+  color: var(--lime);
+  font-weight: 500;
+}
+.cw-key {
+  cursor: pointer;
+  outline: none;
+}
+.cw-key path {
+  transition: stroke 150ms var(--ease);
+}
+.cw-key:hover path {
+  stroke: var(--ring);
+}
+.cw-key:focus-visible path {
+  stroke: var(--foreground);
+  stroke-width: 2;
+}
+
+/* ---------- Signal Flow ---------- */
+
+.sig-chain {
+  list-style: decimal;
+  padding-left: 1.6em;
+  margin: 12px 0;
+  width: 100%;
+  max-width: 460px;
+}
+.sig-chain li {
+  padding: 7px 12px;
+  margin: 6px 0;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.sig-chain li::marker {
+  color: var(--muted-foreground);
+}
+.sig-chain li.is-new {
+  background: var(--card);
+}
+.sig-step {
+  display: block;
+}
+.sig-chain li.is-new .sig-step {
+  font-weight: 500;
+}
+.sig-why {
+  display: block;
+  margin-top: 2px;
+  text-wrap: pretty;
+}
+.sig-nav {
+  flex-wrap: wrap;
+}
+.sig-count {
+  margin-left: auto;
+}
+.sig-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+.sig-chip {
+  white-space: normal;
+  text-align: left;
+}
+.sig-chip.is-wrong {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.sig-chip.is-hint {
+  border-color: var(--lime);
+  box-shadow: 0 0 0 1px var(--lime);
+}
+
+/* ---------- Set Builder ---------- */
+
+.learn-crate {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.learn-crate li + li {
+  margin-top: 6px;
+}
+.learn-track {
+  width: 100%;
+  box-shadow: none;
+  text-align: left;
+  padding: 6px 10px;
+  min-width: 0;
+}
+.learn-track:hover:not(:disabled) {
+  background: var(--hover);
+}
+.learn-track.is-on,
+.learn-track[aria-pressed='true'] {
+  border-color: var(--lime);
+}
+.learn-track .tag {
+  min-width: 3.4em;
+  text-align: center;
+}
+.learn-track .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.learn-role {
+  width: 1em;
+  flex: none;
+  font-weight: 600;
+  color: var(--lime);
+}
+.learn-energy {
+  display: inline-block;
+  flex: none;
+  width: 48px;
+  height: 5px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--muted);
+}
+.learn-energy i {
+  display: block;
+  height: 100%;
+  background: var(--muted-foreground);
+}
+.learn-check {
+  margin: 4px 0 0;
+}
+.learn-pair {
+  font-weight: 500;
+}
+.learn-parts {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.learn-parts li {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+  gap: 2px 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.learn-score {
+  margin-top: 24px;
+}
+.learn-best {
+  list-style: decimal;
+  padding-left: 1.6em;
+  margin: 6px 0 0;
+}
+.learn-best li + li {
+  margin-top: 2px;
+}
+.learn-best li::marker {
+  color: var(--muted-foreground);
+}
+.note-bad {
+  color: var(--bad);
+}
+
+@media (max-width: 640px) {
+  .learn-card {
+    padding: 14px;
+  }
+  .tempo-pair {
+    grid-template-columns: 1fr;
+  }
+  .tempo-head .tempo-in {
+    max-width: none;
+  }
+  .calc-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .calc-f {
+    grid-column: 1 / -1;
+  }
+  .cam-cols {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .cam-cols .viz {
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  .learn-parts li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sig-count {
+    margin-left: 0;
+    width: 100%;
+  }
+}

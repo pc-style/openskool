@@ -73,7 +73,8 @@ function lockLine(t: RoundTiming) {
 }
 
 /**
- * Listen-and-choose (or quiz) drill: N rounds, keyboard 1–N to answer, R to replay, Enter for next.
+ * Listen-and-choose (or quiz) drill: N rounds, keyboard 1–N to answer, Space to replay, S to skip, Enter for next.
+ * R (restart the run) belongs to the drill page.
  * When a round's `play()` resolves timing, a beat strip follows the audio and the answers stay locked
  * until `enableAt` has been heard.
  */
@@ -204,17 +205,34 @@ export function ChoiceDrill({
     else setI((x) => x + 1)
   }, [picked, i, rounds, right, wrong, finish, timed])
 
+  /** Moves straight on. The round counts as missed, with the right answer listed on the results. */
+  const skip = useCallback(() => {
+    if (!round || picked || finished.current) return
+    const s = stats.current
+    s.streak = 0
+    s.misses.push({ prompt: round.prompt, picked: 'Skipped', answer: round.options.find((o) => o.id === round.answer)?.label ?? round.answer })
+    setStreak(0)
+    const w = wrong + 1
+    setWrong(w)
+    if (!timed && i + 1 >= rounds) finish(right, w)
+    else setI((x) => x + 1)
+  }, [round, picked, wrong, right, timed, i, rounds, finish])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!round) return
+      if (!round || e.metaKey || e.ctrlKey || e.altKey) return
       const n = Number(e.key)
       if (n >= 1 && n <= round.options.length) choose(round.options[n - 1].id)
       else if (e.key === 'Enter') next()
-      else if ((e.key === 'r' || e.key === 'R') && round.play) begin(round, false)
+      else if (e.key === 's' || e.key === 'S') skip()
+      else if (e.code === 'Space' && round.play && !(e.target instanceof HTMLButtonElement)) {
+        e.preventDefault()
+        begin(round, false)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [round, choose, next, begin])
+  }, [round, choose, next, skip, begin])
 
   const answerLabel = round?.options.find((o) => o.id === round.answer)?.label
 
@@ -269,7 +287,12 @@ export function ChoiceDrill({
           <div className="row">
             {round.play && (
               <button className="ghost" onClick={() => begin(round, false)}>
-                ↻ Replay <kbd>R</kbd>
+                ↻ Replay <kbd>Space</kbd>
+              </button>
+            )}
+            {!picked && (
+              <button className="ghost" onClick={skip}>
+                Skip <kbd>S</kbd>
               </button>
             )}
             {picked && !timed && (

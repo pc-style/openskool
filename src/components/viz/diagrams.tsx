@@ -214,12 +214,31 @@ function safeMoves(c: string) {
   return [`${camelotWrap(n - 1)}${l}`, `${camelotWrap(n + 1)}${l}`, `${n}${l === 'A' ? 'B' : 'A'}`]
 }
 
+/** An extra mark on a Camelot key: `boost` dashed, `good` lime, `bad` red and dashed. */
+export interface CamelotMark {
+  code: string
+  tone: 'boost' | 'good' | 'bad'
+}
+
 /**
  * The 12-segment Camelot wheel: inner ring A (minor), outer ring B (major), 12 at the top. The start
  * key and its safe neighbours get muted fills; the answer is outlined in lime, or in red when it is
- * the clash the round asked for.
+ * the clash the round asked for. Without `start` nothing is shaded. With `onSelect` every key is a
+ * focusable button (style it with `.cw-key`); `highlight` adds extra outlines.
  */
-export function CamelotWheel({ start, answer, clash }: { start: string; answer?: string; clash?: boolean }) {
+export function CamelotWheel({
+  start,
+  answer,
+  clash,
+  onSelect,
+  highlight = [],
+}: {
+  start?: string
+  answer?: string
+  clash?: boolean
+  onSelect?: (code: string) => void
+  highlight?: CamelotMark[]
+}) {
   const S = 260
   const c = S / 2
   const rings = { A: [52, 89], B: [89, 126] } as const
@@ -232,7 +251,12 @@ export function CamelotWheel({ start, answer, clash }: { start: string; answer?:
     const a1 = n * 30 + 15
     return `M${pt(r1, a0)}A${r1} ${r1} 0 0 1 ${pt(r1, a1)}L${pt(r0, a1)}A${r0} ${r0} 0 0 0 ${pt(r0, a0)}Z`
   }
-  const safe = safeMoves(start)
+  const segOf = (code: string) => {
+    const [r0, r1] = rings[code.slice(-1) as 'A' | 'B']
+    return seg(camelotNum(code), r0, r1)
+  }
+  const safe = start ? safeMoves(start) : []
+  const marked = new Set(highlight.map((m) => m.code))
   const cells = (['A', 'B'] as const).flatMap((l) => Array.from({ length: 12 }, (_, i) => ({ n: i + 1, l, code: `${i + 1}${l}` })))
   const fillOf = (code: string) =>
     code === start
@@ -240,15 +264,36 @@ export function CamelotWheel({ start, answer, clash }: { start: string; answer?:
       : safe.includes(code)
         ? 'color-mix(in srgb, var(--foreground) 9%, transparent)'
         : 'transparent'
-  const label = `Camelot wheel: ${start} with safe moves ${safe.join(', ')}${answer && answer !== start ? `; answer ${answer}` : ''}`
+  const label = start
+    ? `Camelot wheel: ${start} with safe moves ${safe.join(', ')}${answer && answer !== start ? `; answer ${answer}` : ''}`
+    : 'Camelot wheel'
+  const stroke = { boost: 'var(--foreground)', good: 'var(--lime)', bad: 'var(--bad)' }
   return (
     <figure className="viz fade-in" style={{ maxWidth: 300 }}>
-      <svg viewBox={`0 0 ${S} ${S}`} role="img" aria-label={label}>
+      <svg viewBox={`0 0 ${S} ${S}`} role={onSelect ? 'group' : 'img'} aria-label={label}>
         {cells.map(({ n, l, code }) => {
           const [r0, r1] = rings[l]
-          const on = code === start || safe.includes(code) || code === answer
+          const on = code === start || safe.includes(code) || code === answer || marked.has(code)
+          const select = onSelect && (() => onSelect(code))
           return (
-            <g key={code}>
+            <g
+              key={code}
+              className={onSelect ? 'cw-key' : undefined}
+              role={onSelect ? 'button' : undefined}
+              tabIndex={onSelect ? 0 : undefined}
+              aria-label={onSelect ? code : undefined}
+              aria-pressed={onSelect ? code === start : undefined}
+              onClick={select}
+              onKeyDown={
+                select &&
+                ((e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    select()
+                  }
+                })
+              }
+            >
               <path d={seg(n, r0, r1)} fill={fillOf(code)} stroke="var(--border)" />
               <text
                 x={c + ((r0 + r1) / 2) * Math.sin((n * Math.PI) / 6)}
@@ -261,25 +306,39 @@ export function CamelotWheel({ start, answer, clash }: { start: string; answer?:
             </g>
           )
         })}
+        {highlight.map((m) => (
+          <path
+            key={`${m.code}-${m.tone}`}
+            d={segOf(m.code)}
+            fill={m.tone === 'good' ? 'var(--lime-soft)' : 'none'}
+            stroke={stroke[m.tone]}
+            strokeWidth={m.tone === 'boost' ? 1.25 : 2}
+            strokeDasharray={m.tone === 'good' ? undefined : m.tone === 'boost' ? '2 3' : '4 3'}
+            pointerEvents="none"
+          />
+        ))}
         {answer && (
           <path
-            d={seg(camelotNum(answer), rings[answer.slice(-1) as 'A' | 'B'][0], rings[answer.slice(-1) as 'A' | 'B'][1])}
+            d={segOf(answer)}
             fill={clash ? 'none' : 'var(--lime-soft)'}
             stroke={clash ? 'var(--bad)' : 'var(--lime)'}
             strokeWidth={2}
             strokeDasharray={clash ? '4 3' : undefined}
+            pointerEvents="none"
           />
         )}
-        <text x={c} y={c - 2} textAnchor="middle">
+        <text x={c} y={c - 2} textAnchor="middle" pointerEvents="none">
           A = minor
         </text>
-        <text x={c} y={c + 12} textAnchor="middle">
+        <text x={c} y={c + 12} textAnchor="middle" pointerEvents="none">
           B = major
         </text>
       </svg>
-      <figcaption style={{ textAlign: 'center', marginTop: 4 }}>
-        Shaded: {start} and its safe moves {safe.join(', ')}.
-      </figcaption>
+      {start && (
+        <figcaption style={{ textAlign: 'center', marginTop: 4 }}>
+          Shaded: {start} and its safe moves {safe.join(', ')}.
+        </figcaption>
+      )}
     </figure>
   )
 }

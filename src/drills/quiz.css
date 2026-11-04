@@ -158,3 +158,25 @@ button.set-row:hover:not(:disabled) {
     padding: 20px;
   }
 }
+
+/* ---------- Signal Flow ---------- */
+.signal .order li > span {
+  display: block;
+}
+.signal .order-why {
+  margin-top: 2px;
+  font-weight: 400;
+}
+.signal .order-next {
+  border-style: dashed;
+}
+.chips .chip-wrong {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.signal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}

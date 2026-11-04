@@ -1,8 +1,9 @@
 import type { ComponentType } from 'react'
 import type { DrillProps } from './common'
 import { BassClash, EqDetective, FilterSweep, FxSpotter, GainMatch, GenreId, LoopLab, SyncCheck, TimeFeel } from './ear'
-import { GearLab } from './gear'
-import { BpmMath, Camelot, SetBuilder, SignalFlow, Vocab } from './quiz'
+import { GearLab, GearLearn } from './gear'
+import { BpmLearn, CamelotLearn, SetLearn, SignalLearn } from './learn'
+import { BpmMath, Camelot, SetBuilder, SignalFlow, Vocab, VocabLearn } from './quiz'
 import { DownbeatTapper, DropTiming, PhraseIn, TapTempo, TempoMatch } from './timing'
 
 export const DRILL_COMPONENTS: Record<string, ComponentType<DrillProps>> = {
@@ -26,4 +27,14 @@ export const DRILL_COMPONENTS: Record<string, ComponentType<DrillProps>> = {
   vocab: Vocab,
   signal: SignalFlow,
   gear: GearLab,
+}
+
+/** The Learn step of each knowledge drill, shown before its quiz. */
+export const LEARN_COMPONENTS: Record<string, ComponentType<{ onQuiz: () => void }>> = {
+  bpmmath: BpmLearn,
+  camelot: CamelotLearn,
+  signal: SignalLearn,
+  setbuilder: SetLearn,
+  vocab: VocabLearn,
+  gear: GearLearn,
 }

@@ -75,14 +75,20 @@ const shuffle = <T,>(a: T[]) => {
 
 type Round = { phase: 'ask' | 'right' | 'wrong' | 'timeout'; picked?: string }
 
-export function GearLab({ onDone }: DrillProps) {
+/** Gear Lab's Learn step: explore the controller; its button hands over to the quiz. */
+export function GearLearn({ onQuiz }: { onQuiz: () => void }) {
+  return <GearLab source={{ kind: 'builtin', genre: 'house' }} onDone={() => {}} onQuiz={onQuiz} />
+}
+
+/** The find-it quiz, or with `onQuiz` the explore mode that leads to it. */
+export function GearLab({ onDone, onQuiz }: DrillProps & { onQuiz?: () => void }) {
   const narrow = useNarrow()
-  const [mode, setMode] = useState<'explore' | 'quiz'>('explore')
+  const [mode, setMode] = useState<'explore' | 'quiz'>(onQuiz ? 'explore' : 'quiz')
   const [sel, setSel] = useState<string | null>(null) // instance id, e.g. "trim@c1"
   const [explored, setExplored] = useState<string[]>(loadExplored)
 
   // quiz
-  const [targets, setTargets] = useState<string[]>([])
+  const [targets, setTargets] = useState<string[]>(() => (onQuiz ? [] : shuffle(KINDS.map((k) => k.id)).slice(0, ROUNDS)))
   const [i, setI] = useState(0)
   const [round, setRound] = useState<Round>({ phase: 'ask' })
   const [right, setRight] = useState(0)
@@ -261,7 +267,7 @@ export function GearLab({ onDone }: DrillProps) {
               <span className="muted small tabular">
                 <Value v={explored.length} /> of {KINDS.length} explored
               </span>
-              <button className="primary" onClick={startQuiz}>
+              <button className="primary" onClick={onQuiz ?? startQuiz}>
                 Start quiz
               </button>
             </div>

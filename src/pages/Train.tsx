@@ -1,13 +1,14 @@
 import { useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { GENRES, type Genre } from '../audio/synth'
-import { Value } from '../components/Swap'
+import { Swap, Value } from '../components/Swap'
 import { DMeter } from '../components/viz/meters'
 import { DRILLS, hasWorlds, SKILLS } from '../lib/drills'
 import { missionsDone } from '../lib/course'
 import { best, bestIn, plays, updateSettings, useProgress, worldAt, WORLDS, xpOf } from '../lib/progress'
 
-const AUDIO_TAG = { mine: 'Your tracks', builtin: 'Built-in audio', none: 'No audio' }
+const AUDIO_TAG = { mine: 'Your tracks', builtin: 'Built-in audio', none: 'Learn, then quiz' }
+type Tab = 'ear' | 'knowledge'
 
 export function Train() {
   const s = useProgress()
@@ -16,6 +17,9 @@ export function Train() {
   useEffect(() => {
     if (asked && asked in GENRES) updateSettings({ source: 'builtin', genre: asked })
   }, [asked])
+  const [params, setParams] = useSearchParams()
+  const tab: Tab = params.get('tab') === 'knowledge' ? 'knowledge' : 'ear'
+  const inTab = DRILLS.filter((d) => (tab === 'knowledge') === (d.audio === 'none'))
   const where: Genre | 'mine' = s.settings.source === 'mine' ? 'mine' : s.settings.genre
   const xp = xpOf(s, missionsDone(s))
   const reached = worldAt(xp).index
@@ -23,32 +27,51 @@ export function Train() {
   return (
     <div>
       <h1>Train</h1>
-      <p className="muted">
-        {DRILLS.length} drills, grouped by skill. Pick a tempo world: faster ones are harder and pay more XP. Most audio drills can also run on your own tracks.
-      </p>
-      <div className="world-picker">
-        <div className="seg-group" role="group" aria-label="Tempo world">
-          {WORLDS.map((w, i) => (
-            <button
-              key={w.genre}
-              className={where === w.genre ? 'seg on' : 'seg'}
-              onClick={() => updateSettings({ source: 'builtin', genre: w.genre })}
-              title={i <= reached ? `${w.mult}× XP` : `Recommended from ${w.xp.toLocaleString()} XP. Open to try any time.`}
-            >
-              {GENRES[w.genre].name} {GENRES[w.genre].bpm}
-              {w.mult > 1 && <span className="seg-mult"> {w.mult}×</span>}
-            </button>
-          ))}
-          <button className={where === 'mine' ? 'seg on' : 'seg'} onClick={() => updateSettings({ source: 'mine' })}>
-            My tracks
+      <div className="seg-group train-tabs" role="tablist" aria-label="Drill type">
+        {(
+          [
+            ['ear', 'Ear & timing'],
+            ['knowledge', 'Knowledge'],
+          ] as const
+        ).map(([t, name]) => (
+          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'seg on' : 'seg'} onClick={() => setParams(t === 'ear' ? {} : { tab: t }, { replace: true })}>
+            {name}
           </button>
-        </div>
+        ))}
       </div>
-      {SKILLS.map((sk) => (
+      <Swap k={tab}>
+        {tab === 'ear' ? (
+          <>
+            <p className="muted">
+              Listening and timing drills. Pick a tempo world: faster ones are harder and pay more XP. Most can also run on your own tracks.
+            </p>
+            <div className="world-picker">
+              <div className="seg-group" role="group" aria-label="Tempo world">
+                {WORLDS.map((w, i) => (
+                  <button
+                    key={w.genre}
+                    className={where === w.genre ? 'seg on' : 'seg'}
+                    onClick={() => updateSettings({ source: 'builtin', genre: w.genre })}
+                    title={i <= reached ? `${w.mult}× XP` : `Recommended from ${w.xp.toLocaleString()} XP. Open to try any time.`}
+                  >
+                    {GENRES[w.genre].name} {GENRES[w.genre].bpm}
+                    {w.mult > 1 && <span className="seg-mult"> {w.mult}×</span>}
+                  </button>
+                ))}
+                <button className={where === 'mine' ? 'seg on' : 'seg'} onClick={() => updateSettings({ source: 'mine' })}>
+                  My tracks
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="muted">No music needed. Each one starts with an interactive lesson, then a quiz on what it taught. Skip to the quiz whenever you like.</p>
+        )}
+      {SKILLS.filter((sk) => inTab.some((d) => d.skill === sk)).map((sk) => (
         <section key={sk} className="skill-group">
           <h2>{sk}</h2>
           <div className="list">
-            {DRILLS.filter((d) => d.skill === sk).map((d) => {
+            {inTab.filter((d) => d.skill === sk).map((d) => {
               // drills that play the picked audio show their best there; the rest have one best
               const scoped = hasWorlds(d.id) && (where !== 'mine' || d.audio === 'mine')
               const b = scoped ? bestIn(s, d.id, where) : best(s, d.id)
@@ -73,6 +96,7 @@ export function Train() {
           </div>
         </section>
       ))}
+      </Swap>
     </div>
   )
 }

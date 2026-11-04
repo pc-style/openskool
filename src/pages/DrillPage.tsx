@@ -5,7 +5,7 @@ import { Swap } from '../components/Swap'
 import { Scope } from '../components/viz/fields'
 import { DMeter, ScoreRing } from '../components/viz/meters'
 import { GENRES, type Genre } from '../audio/synth'
-import { DRILL_COMPONENTS } from '../drills'
+import { DRILL_COMPONENTS, LEARN_COMPONENTS } from '../drills'
 import type { RunDetail } from '../drills/common'
 import { badges, isDailyRun, nextUp } from '../lib/coach'
 import { currentWeek, isDrillMission, MISSION_XP, missionBest, missionDone, missionId, missionsDone, WEEKS } from '../lib/course'
@@ -64,7 +64,7 @@ function Drill({ id }: { id: string }) {
   const meta = drillById(id)
   const s = useProgress()
   const allTracks = useTracks()
-  const [phase, setPhase] = useState<'intro' | 'play' | 'done'>('intro')
+  const [phase, setPhase] = useState<'intro' | 'learn' | 'play' | 'done'>('intro')
   const [result, setResult] = useState<RunResult | null>(null)
   const [runKey, setRunKey] = useState(0)
   // mission links name a tempo world: ?genre=techno
@@ -73,8 +73,22 @@ function Drill({ id }: { id: string }) {
   useEffect(() => {
     if (askGenre && askGenre in GENRES) updateSettings({ source: 'builtin', genre: askGenre as Genre })
   }, [askGenre])
+  // R restarts the run in place, from any round; on the results screen it plays again
+  useEffect(() => {
+    if (phase !== 'play' && phase !== 'done') return
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key !== 'r' && e.key !== 'R') || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
+      setRunKey((k) => k + 1)
+      setPhase('play')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [phase])
   if (!meta) return <p>Unknown drill. <Link to="/train">Back to Train</Link></p>
   const Comp = DRILL_COMPONENTS[meta.id]
+  const Learn = LEARN_COMPONENTS[meta.id]
   const mineCount = readyTracks().length
   // why "My tracks" is off, when it is
   const mineOff = !mineCount
@@ -104,6 +118,11 @@ function Drill({ id }: { id: string }) {
   const daily = isDailyRun(s, meta.id)
 
   const done = (score: number, detail?: RunDetail) => {
+    // a run where every round was skipped isn't a result: nothing is saved and no XP is paid
+    if (!score && detail?.misses?.length && detail.misses.every((m) => m.picked === 'Skipped')) {
+      setPhase(Learn ? 'learn' : 'intro')
+      return
+    }
     const prev = getState()
     const prevBest = best(prev, meta.id)
     const isDaily = isDailyRun(prev, meta.id)
@@ -166,7 +185,7 @@ function Drill({ id }: { id: string }) {
   return (
     <div className="drill-page">
       <div className="crumbs">
-        <Link to="/train">Train</Link> / {meta.skill}
+        <Link to={meta.audio === 'none' ? '/train?tab=knowledge' : '/train'}>{meta.audio === 'none' ? 'Knowledge' : 'Train'}</Link> / {meta.skill}
       </div>
       <h1>{meta.name}</h1>
       <p className="drill-desc">{meta.blurb}</p>
@@ -238,9 +257,21 @@ function Drill({ id }: { id: string }) {
               </p>
             )}
             <div className="row start-row">
-              <button className="primary big" onClick={start}>
-                Start
-              </button>
+              {Learn ? (
+                <>
+                  {/* learn first until you have taken the quiz once */}
+                  <button className={runs.length ? 'big' : 'primary big'} onClick={() => setPhase('learn')}>
+                    Learn
+                  </button>
+                  <button className={runs.length ? 'primary big' : 'big'} onClick={start}>
+                    {runs.length ? 'Quiz' : 'Skip to quiz'}
+                  </button>
+                </>
+              ) : (
+                <button className="primary big" onClick={start}>
+                  Start
+                </button>
+              )}
               <span className="muted small tabular">
                 {picker ? (
                   <>
@@ -254,8 +285,27 @@ function Drill({ id }: { id: string }) {
             </div>
           </div>
         )}
+        {phase === 'learn' && Learn && (
+          <div className="learn-stage">
+            <div className="stage-bar">
+              <span className="muted small">Learn</span>
+              <button className="ghost" onClick={start}>
+                Skip to quiz
+              </button>
+            </div>
+            <Learn onQuiz={start} />
+          </div>
+        )}
         {phase === 'play' && (
           <div className="stage">
+            <div className="stage-bar">
+              <button className="ghost" onClick={() => setPhase(Learn ? 'learn' : 'intro')}>
+                {Learn ? '← Learn' : '← Intro'}
+              </button>
+              <button className="ghost" onClick={() => setRunKey((k) => k + 1)} title="Start this run again from round 1">
+                ↺ Restart <kbd>R</kbd>
+              </button>
+            </div>
             {SCOPE_SAFE.has(meta.id) && (
               <div className="scope">
                 <Scope className="absolute inset-0" palette={['--card', 'ink']} />
@@ -272,6 +322,7 @@ function Drill({ id }: { id: string }) {
               setPhase('play')
             }}
             changeAudio={picker ? () => setPhase('intro') : undefined}
+            learn={Learn ? () => setPhase('learn') : undefined}
           />
         )}
       </Swap>
@@ -279,7 +330,7 @@ function Drill({ id }: { id: string }) {
   )
 }
 
-function Results({ r, again, changeAudio }: { r: RunResult; again: () => void; changeAudio?: () => void }) {
+function Results({ r, again, changeAudio, learn }: { r: RunResult; again: () => void; changeAudio?: () => void; learn?: () => void }) {
   const d = r.detail
   const g = d?.grades
   const total = r.xp.score + r.xp.world + r.xp.daily + r.xp.first + r.xp.missions
@@ -348,9 +399,10 @@ function Results({ r, again, changeAudio }: { r: RunResult; again: () => void; c
           </Link>
         )}
         <button className={next ? '' : 'primary'} onClick={again}>
-          Again
+          Again <kbd>R</kbd>
         </button>
         {changeAudio && <button onClick={changeAudio}>Change audio</button>}
+        {learn && <button onClick={learn}>Learn again</button>}
         <Link to="/" className="button">
           Today
         </Link>

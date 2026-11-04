@@ -410,3 +410,26 @@
     width: 48px;
   }
 }
+
+/* ---------- run controls: back, restart ---------- */
+.stage-bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: -12px -12px 12px;
+}
+.learn-stage .stage-bar {
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.skip {
+  display: block;
+  margin: 20px auto 0;
+}
+.train-tabs {
+  margin: 4px 0 16px;
+}

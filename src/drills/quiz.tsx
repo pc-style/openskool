@@ -1,11 +1,12 @@
 // No-audio drills: tempo maths, Camelot, vocabulary, signal flow and set building.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Swap, Value } from '../components/Swap'
 import { CamelotWheel } from '../components/viz/diagrams'
 import { pick, shuffle } from '../lib/clips'
 import { readyTracks } from '../lib/library'
 import { getState, setKnown, useProgress } from '../lib/progress'
 import { ChoiceDrill, type ChoiceRound, type DrillProps, type RunDetail } from './common'
+import { ROUTINES } from '../lib/signal'
 import './quiz.css'
 
 const ri = (a: number, b: number) => a + Math.floor(Math.random() * (b - a + 1))
@@ -291,7 +292,8 @@ export function blankTerm(term: string, def: string) {
   return def.replace(new RegExp(`\\b(${words.join('|')})\\w*`, 'gi'), '____')
 }
 
-function Study({ onStart }: { onStart: () => void }) {
+/** Vocab's Learn step: flip cards and mark the ones you know. */
+export function VocabLearn({ onQuiz: onStart }: { onQuiz: () => void }) {
   const known = useProgress().known
   // terms you have not marked yet come first; the order holds for the session
   const [deck] = useState(() => {
@@ -349,7 +351,7 @@ function Study({ onStart }: { onStart: () => void }) {
       <div className="study-start">
         <p className="muted small">The blitz shows a definition with its words blanked out. Pick the term, as many as you can in 60 seconds.</p>
         <button className="primary" onClick={onStart}>
-          Start the 60-second blitz
+          Start the quiz
         </button>
       </div>
     </div>
@@ -357,7 +359,6 @@ function Study({ onStart }: { onStart: () => void }) {
 }
 
 export function Vocab({ onDone }: DrillProps) {
-  const [mode, setMode] = useState<'study' | 'blitz'>('study')
   const make = (): ChoiceRound => {
     const [term, def] = pick(VOCAB)
     const wrong = shuffle(VOCAB.filter(([t]) => t !== term))
@@ -365,91 +366,121 @@ export function Vocab({ onDone }: DrillProps) {
       .map(([t]) => t)
     return { prompt: blankTerm(term, def), sub: 'Which term is this?', ...ans(term, wrong), explain: `${term}: ${def}.` }
   }
-  return (
-    <Swap k={mode}>
-      {mode === 'study' ? <Study onStart={() => setMode('blitz')} /> : <ChoiceDrill rounds={999} timed={60} make={make} onDone={onDone} />}
-    </Swap>
-  )
+  return <ChoiceDrill rounds={999} timed={60} make={make} onDone={onDone} />
 }
 
 // ---------- Signal Flow (ordering) ----------
-const SEQUENCES: { title: string; steps: string[] }[] = [
-  { title: 'Channel signal path', steps: ['Trim / gain', 'EQ', 'Filter', 'Channel fader', 'Crossfader', 'Master out'] },
-  { title: 'The rig, end to end', steps: ['Library / USB', 'Deck', 'Mixer channel', 'Master bus', 'PA and booth'] },
-  {
-    title: 'A clean blend',
-    steps: ['Cue B in headphones', "Set B's trim to match A", "Start B on A's phrase start", 'Match tempo with the pitch fader', 'Fix phase with a nudge', "Fader up with B's low cut", 'Swap the lows on the phrase', 'Fade A out'],
-  },
-  { title: 'An echo-out exit', steps: ['Find the last phrase of A', 'Set echo to ½ or ¾ beat', 'Engage echo on the last beat', "Pull A's fader", 'Let the tail ring over B'] },
-]
-
+/**
+ * Click the steps of each routine in order. Each pick is checked at once: a right step locks in, a wrong
+ * one flashes and stays in the pool, so one early slip never marks the rest wrong. Score: steps placed on
+ * the first try.
+ */
 export function SignalFlow({ onDone }: DrillProps) {
   const [i, setI] = useState(0)
-  const [order, setOrder] = useState<string[]>([])
-  const [checked, setChecked] = useState(false)
-  const [total, setTotal] = useState(0)
   const [placed, setPlaced] = useState(0)
-  const [misses, setMisses] = useState<NonNullable<RunDetail['misses']>>([])
-  const seq = SEQUENCES[i]
-  const pool = useMemo(() => shuffle(seq.steps), [seq])
-  const correct = order.filter((s, k) => seq.steps[k] === s).length
-  const steps = SEQUENCES.reduce((n, s) => n + s.steps.length, 0)
-  const check = () => {
-    setChecked(true)
-    setTotal((t) => t + (correct / seq.steps.length) * (1000 / SEQUENCES.length))
-    setPlaced((p) => p + correct)
-    setMisses((m) => [...m, ...order.flatMap((s, k) => (seq.steps[k] === s ? [] : [{ prompt: `${seq.title}, step ${k + 1}`, picked: s, answer: seq.steps[k] }]))])
+  const [wrongAt, setWrongAt] = useState<{ step: string; n: number } | null>(null)
+  const [firstTry, setFirstTry] = useState(0)
+  const slipped = useRef(false)
+  const stats = useRef({ firstTry: 0, misses: [] as NonNullable<RunDetail['misses']> })
+  const r = ROUTINES[i]
+  const pool = useMemo(() => shuffle(r.steps.map((x) => x.step)), [r])
+  const total = ROUTINES.reduce((n, x) => n + x.steps.length, 0)
+  const done = placed >= r.steps.length
+  const last = i + 1 >= ROUTINES.length
+
+  const finish = () => {
+    const { firstTry: ft, misses } = stats.current
+    onDone(Math.round((ft / total) * 1000), { right: ft, total, misses })
   }
+  const advance = () => {
+    if (last) return finish()
+    setI(i + 1)
+    setPlaced(0)
+    setWrongAt(null)
+    slipped.current = false
+  }
+  const pick = (step: string) => {
+    if (done) return
+    const want = r.steps[placed]
+    if (step === want.step) {
+      if (!slipped.current) {
+        stats.current.firstTry++
+        setFirstTry(stats.current.firstTry)
+      }
+      slipped.current = false
+      setWrongAt(null)
+      setPlaced(placed + 1)
+    } else {
+      if (!slipped.current) stats.current.misses.push({ prompt: `${r.title}, step ${placed + 1}`, picked: step, answer: want.step })
+      slipped.current = true
+      setWrongAt((w) => ({ step, n: (w?.n ?? 0) + 1 }))
+    }
+  }
+  const skip = () => {
+    // the steps left count as missed
+    for (let k = placed; k < r.steps.length; k++) if (!(k === placed && slipped.current)) stats.current.misses.push({ prompt: `${r.title}, step ${k + 1}`, picked: 'Skipped', answer: r.steps[k].step })
+    advance()
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if ((e.key === 's' || e.key === 'S') && !done) skip()
+      else if (e.key === 'Enter' && done) advance()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
   return (
-    <div className="center">
+    <div className="signal">
       <div className="drill-meta">
         <span>
-          Round {i + 1} / {SEQUENCES.length}
+          Routine <Value v={i + 1} /> of {ROUTINES.length}
         </span>
-        <span>{Math.round(total)} pts</span>
+        <span>
+          <Value v={firstTry} /> of {total} first try
+        </span>
       </div>
-      <h2 className="prompt">{seq.title}: click the steps in order</h2>
-      <ol className="order">
-        {order.map((s, k) => (
-          <li key={s} className={checked ? (seq.steps[k] === s ? 'good' : 'bad') : ''} onClick={() => !checked && setOrder(order.filter((x) => x !== s))}>
-            {s}
-            {checked && seq.steps[k] !== s && <em> → {seq.steps[k]}</em>}
-          </li>
-        ))}
-      </ol>
-      <div className="chips">
-        {pool
-          .filter((s) => !order.includes(s))
-          .map((s) => (
-            <button key={s} onClick={() => setOrder([...order, s])}>
-              {s}
-            </button>
+      <Swap k={i}>
+        <h2 className="prompt">{r.title}</h2>
+        <p className="sub">{r.about} Click the steps in order.</p>
+        <ol className="order">
+          {r.steps.slice(0, placed).map((x, k) => (
+            <li key={x.step} className="good">
+              <span>{x.step}</span>
+              {k === placed - 1 && <span className="order-why muted small">{x.why}</span>}
+            </li>
           ))}
-      </div>
-      {!checked ? (
-        <button className="primary" disabled={order.length < seq.steps.length} onClick={check}>
-          Check
-        </button>
-      ) : (
-        <>
-          <p>
-            {correct}/{seq.steps.length} in the right place.
+          {!done && <li className="order-next muted">Step {placed + 1}?</li>}
+        </ol>
+        {!done ? (
+          <div className="chips">
+            {pool
+              .filter((x) => !r.steps.slice(0, placed).some((y) => y.step === x))
+              .map((x) => (
+                <button key={x} className={wrongAt?.step === x ? 'chip-wrong' : undefined} data-n={wrongAt?.step === x ? wrongAt.n : undefined} onClick={() => pick(x)}>
+                  {x}
+                </button>
+              ))}
+          </div>
+        ) : (
+          <p className="fade-in">
+            {r.steps.length} steps in order.{' '}
+            <button className="primary" onClick={advance} autoFocus>
+              {last ? 'Finish' : 'Next routine'} <kbd>↵</kbd>
+            </button>
           </p>
-          <button
-            className="primary"
-            autoFocus
-            onClick={() => {
-              if (i + 1 >= SEQUENCES.length) onDone(Math.round(total), { right: placed, total: steps, misses })
-              else {
-                setI(i + 1)
-                setOrder([])
-                setChecked(false)
-              }
-            }}
-          >
-            {i + 1 >= SEQUENCES.length ? 'Finish' : 'Next'}
-          </button>
-        </>
+        )}
+        {wrongAt && !done && (
+          <p className="muted small" role="status">
+            Not step {placed + 1}. {placed > 0 ? `After “${r.steps[placed - 1].step}”, what comes next?` : 'What comes first?'}
+          </p>
+        )}
+      </Swap>
+      {!done && (
+        <button className="ghost skip" onClick={skip}>
+          {last ? 'Skip and finish' : 'Skip routine'} <kbd>S</kbd>
+        </button>
       )}
     </div>
   )
@@ -596,10 +627,10 @@ export function SetBuilder({ onDone }: DrillProps) {
     setResult(r)
     setScores((s) => [...s, r.score])
   }
-  const next = () => {
+  const next = (sc = scores) => {
     if (ci + 1 >= CRATES) {
-      const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-      onDone(avg, { right: scores.filter((s) => s >= 700).length, total: CRATES })
+      const avg = Math.round(sc.reduce((a, b) => a + b, 0) / sc.length)
+      onDone(avg, { right: sc.filter((s) => s >= 700).length, total: CRATES })
       return
     }
     setCi(ci + 1)
@@ -636,6 +667,16 @@ export function SetBuilder({ onDone }: DrillProps) {
                 </button>
                 <button className="primary" onClick={submit} disabled={left.length > 0}>
                   Play this order
+                </button>
+                <button
+                  className="ghost"
+                  onClick={() => {
+                    const sc = [...scores, 0]
+                    setScores(sc)
+                    next(sc)
+                  }}
+                >
+                  {ci + 1 >= CRATES ? 'Skip and finish' : 'Skip crate'}
                 </button>
               </div>
             )}
@@ -677,7 +718,7 @@ export function SetBuilder({ onDone }: DrillProps) {
             </ol>
             <Notes set={result.best} />
             <div className="row">
-              <button className="primary" onClick={next} autoFocus>
+              <button className="primary" onClick={() => next()} autoFocus>
                 {ci + 1 >= CRATES ? 'Finish' : 'Next crate'}
               </button>
             </div>

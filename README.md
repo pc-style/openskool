@@ -29,6 +29,12 @@ browser.
   ("Cut", "Deck B in", "↓"), and in the counting drills it hides partway so you count in your head.
   Tap drills grade each tap live (Perfect, Good, Close, Off). Every round ends with what happened,
   in numbers, and a tip for using it in a mix.
+- **Learn, then quiz.** Train has two tabs: Ear & timing for the listening and tapping drills, and
+  Knowledge for the no-audio ones. Every Knowledge drill opens with an interactive lesson (a tempo
+  calculator, a clickable Camelot wheel, step-by-step routines, a transition checker, flashcards, a
+  drawn controller) before its quiz.
+- **Restart or skip anything.** Press R to restart a run from round 1 at any point, and S to skip a
+  round. Space replays the audio in listening drills.
 - **Your tracks.** Files are decoded and analysed in a Web Worker: tempo, beat grid, downbeat, 8-bar
   phrase start, key (Camelot) and energy. If the analysis gets something wrong, fix it in the grid
   editor. Until you add music, synthesized grooves fill in: house 124, techno 134, psytrance 145 and

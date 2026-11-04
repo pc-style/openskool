@@ -1,5 +1,5 @@
 // Drills scored on when you tap or how you ride the pitch fader.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ac, click, out, play, stopAll, track } from '../audio/engine'
 import { barLen, barTime, beatLen, getClip, partnerClip, pickBar, type Clip } from '../lib/clips'
 import { getSettings } from '../lib/progress'
@@ -160,6 +160,26 @@ const ERR_CLASS: Record<TapGrade, string> = { perfect: 'good', good: 'ok', close
 
 function useUnmountStop() {
   useEffect(() => () => stopAll(), [])
+}
+
+/** A Skip button with the S key: the round scores nothing and the next one starts from its Play screen. */
+function Skip({ onSkip, last }: { onSkip: () => void; last: boolean }) {
+  const cb = useRef(onSkip)
+  useLayoutEffect(() => {
+    cb.current = onSkip
+  })
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey && !e.altKey) cb.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  return (
+    <button className="ghost skip" onClick={onSkip}>
+      {last ? 'Skip and finish' : 'Skip round'} <kbd>S</kbd>
+    </button>
+  )
 }
 
 /** One dot per scored bar, filled by grade; a gap marks where the pass mark falls. */
@@ -432,11 +452,18 @@ function OneTapRounds({
 
   const next = () => {
     stopAll()
-    if (i + 1 >= rounds) onDone(Math.round(total), tapDetail(errs))
+    if (i + 1 >= rounds) onDone(Math.round(total), tapDetail(errsRef.current))
     else {
       setI(i + 1)
       setPhase('ready')
     }
+  }
+  const skip = () => {
+    clearTimers()
+    if (cur.current) cur.current.tapped = true
+    errsRef.current = [...errsRef.current, null]
+    setErrs(errsRef.current)
+    next()
   }
 
   const last = i + 1 >= rounds
@@ -476,6 +503,7 @@ function OneTapRounds({
           </>
         )}
       </Swap>
+      {phase !== 'result' && <Skip onSkip={skip} last={last} />}
     </div>
   )
 }
@@ -723,12 +751,18 @@ export function TapTempo({ source, onDone }: DrillProps) {
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  const finish = () => {
-    if (i + 1 >= ROUNDS) onDone(Math.round(total), { right: oks.filter(Boolean).length, total: ROUNDS, bestStreak: longestRun(oks) })
+  const finish = (o = oks) => {
+    if (i + 1 >= ROUNDS) onDone(Math.round(total), { right: o.filter(Boolean).length, total: ROUNDS, bestStreak: longestRun(o) })
     else {
       setI(i + 1)
       setPhase('ready')
     }
+  }
+  const skip = () => {
+    stopAll()
+    const o = [...oks, false]
+    setOks(o)
+    finish(o)
   }
 
   return (
@@ -766,7 +800,7 @@ export function TapTempo({ source, onDone }: DrillProps) {
         ) : phase === 'result' && desc ? (
           <>
             <Verdict d={desc.d} pts={desc.pts} />
-            <button className="primary" onClick={finish} autoFocus>
+            <button className="primary" onClick={() => finish()} autoFocus>
               {i + 1 >= ROUNDS ? 'Finish' : 'Next round'}
             </button>
           </>
@@ -779,6 +813,7 @@ export function TapTempo({ source, onDone }: DrillProps) {
           </>
         )}
       </Swap>
+      {phase !== 'result' && <Skip onSkip={skip} last={i + 1 >= ROUNDS} />}
     </div>
   )
 }
@@ -970,12 +1005,19 @@ export function TempoMatch({ source, onDone }: DrillProps) {
     }
   })
 
-  const finish = () => {
-    if (i + 1 >= ROUNDS) onDone(Math.round(total), { right: oks.filter(Boolean).length, total: ROUNDS, bestStreak: longestRun(oks) })
+  const finish = (o = oks) => {
+    if (i + 1 >= ROUNDS) onDone(Math.round(total), { right: o.filter(Boolean).length, total: ROUNDS, bestStreak: longestRun(o) })
     else {
       setI(i + 1)
       setPhase('ready')
     }
+  }
+  const skip = () => {
+    clearTimeout(r.current.endTimer)
+    stopAll()
+    const o = [...oks, false]
+    setOks(o)
+    finish(o)
   }
 
   return (
@@ -1033,7 +1075,7 @@ export function TempoMatch({ source, onDone }: DrillProps) {
         ) : phase === 'result' && desc ? (
           <>
             <Verdict d={desc.d} pts={desc.pts} />
-            <button className="primary" onClick={finish} autoFocus>
+            <button className="primary" onClick={() => finish()} autoFocus>
               {i + 1 >= ROUNDS ? 'Finish' : 'Next round'}
             </button>
           </>
@@ -1049,6 +1091,7 @@ export function TempoMatch({ source, onDone }: DrillProps) {
           </>
         )}
       </Swap>
+      {phase !== 'result' && <Skip onSkip={skip} last={i + 1 >= ROUNDS} />}
     </div>
   )
 }
