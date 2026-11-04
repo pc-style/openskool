@@ -44,6 +44,7 @@ export const DRILLS: DrillMeta[] = [
       'Music in 4/4 groups beats into bars of four. The first beat, the 1, is where things change: a new bass note, a chord, a crash.',
       'Tap Space (or the pad) on every 1. Off-beat taps and taps on 2, 3 or 4 cost points.',
       'Listen for what changes, not just for the kick. Every kick sounds the same; the 1 is where the music turns over.',
+      'Four short stages: with a click, then the click drops out, then a random start, then a long run. Retry any stage on its own, or press R to start over.',
     ],
   },
   {

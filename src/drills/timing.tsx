@@ -163,7 +163,7 @@ function useUnmountStop() {
 }
 
 /** A Skip button with the S key: the round scores nothing and the next one starts from its Play screen. */
-function Skip({ onSkip, last }: { onSkip: () => void; last: boolean }) {
+function Skip({ onSkip, last, what = 'round' }: { onSkip: () => void; last: boolean; what?: string }) {
   const cb = useRef(onSkip)
   useLayoutEffect(() => {
     cb.current = onSkip
@@ -177,7 +177,7 @@ function Skip({ onSkip, last }: { onSkip: () => void; last: boolean }) {
   }, [])
   return (
     <button className="ghost skip" onClick={onSkip}>
-      {last ? 'Skip and finish' : 'Skip round'} <kbd>S</kbd>
+      {last ? 'Skip and finish' : `Skip ${what}`} <kbd>S</kbd>
     </button>
   )
 }
@@ -200,43 +200,65 @@ function GradeDots({ grades, pass }: { grades: (TapGrade | null)[]; pass: number
 }
 
 // ---------- Downbeat Tapper ----------
-const DB_BARS = 16
-const DB_GRACE = 2
+/**
+ * Four short stages that take the help away one piece at a time, so a slip costs one stage, not the run.
+ * `lead` bars are free (count-in or settling in); `scored` bars count.
+ */
+const DB_STAGES = [
+  { name: 'With the click', lead: 1, scored: 4, click: 'all', random: false, help: 'The track starts on a 1 and a click plays on every beat, high on the 1. Tap with the high click.' },
+  { name: 'Click drops out', lead: 2, scored: 4, click: 'lead', random: false, help: 'Two bars of click count you in, then it stops. Keep tapping the 1 by ear.' },
+  { name: 'Find the 1', lead: 2, scored: 4, click: 'none', random: true, help: 'No click, and the track starts on a random beat. Use the two free bars to find the 1, then tap it.' },
+  { name: 'Long run', lead: 2, scored: 8, click: 'none', random: true, help: 'Same as before, for eight bars. Stay locked on.' },
+] as const
+const DB_TOTAL = DB_STAGES.reduce((n, x) => n + x.scored, 0)
 const GRADE_RANK: Record<TapGrade, number> = { perfect: 0, good: 1, close: 2, off: 3, miss: 4 }
+interface DbStage {
+  errs: (number | null)[]
+  extras: number
+  /** Credit for the stage, 0 to `scored` bars. */
+  pts: number
+}
 export function DownbeatTapper({ source, onDone }: DrillProps) {
   useUnmountStop()
-  const [phase, setPhase] = useState<'ready' | 'loading' | 'playing' | 'done'>('ready')
+  const [si, setSi] = useState(0)
+  const [phase, setPhase] = useState<'ready' | 'loading' | 'playing' | 'result' | 'done'>('ready')
   const [flash, setFlash] = useState(0)
   const [rating, setRating] = useState<TapRating | null>(null)
   const [dots, setDots] = useState<(TapGrade | null)[]>([])
-  const run = useRef<{ targets: number[]; beat: number; taps: number[]; bpm: number }>({ targets: [], beat: 0.5, taps: [], bpm: 120 })
-  const [report, setReport] = useState<{ score: number; errs: (number | null)[]; extras: number; bpm: number; beat: number } | null>(null)
+  const [stages, setStages] = useState<(DbStage | null)[]>([])
+  const run = useRef<{ targets: number[]; lead: number; beat: number; taps: number[]; bpm: number }>({ targets: [], lead: 1, beat: 0.5, taps: [], bpm: 120 })
   const endTimer = useRef(0)
   useEffect(() => () => clearTimeout(endTimer.current), [])
+  const st = DB_STAGES[si]
+  const last = si + 1 >= DB_STAGES.length
+  const pass = Math.ceil(st.scored * 0.75)
 
   const begin = async () => {
+    clearTimeout(endTimer.current)
+    stopAll()
     setPhase('loading')
     const c = await getClip(source)
-    const n = pickBar(c, DB_BARS + 1)
-    const offBeats = 1 + Math.floor(Math.random() * 3)
+    const bars = st.lead + st.scored
+    const n = pickBar(c, bars + 1)
+    const offBeats = st.random ? 1 + Math.floor(Math.random() * 3) : 0
     const from = barTime(c, n) + offBeats * beatLen(c)
     const at = ac().currentTime + 0.2
-    const end = barTime(c, n + DB_BARS) + beatLen(c)
+    const end = barTime(c, n + bars) + beatLen(c)
     play(c.buffer, { from, dur: end - from, at })
     const targets: number[] = []
-    for (let k = 1; k < DB_BARS; k++) targets.push(at + barTime(c, n + k) - from)
-    // count-in: a click on every beat of the free bars, accent on the 1, then it stops
-    for (let k = 0; k < DB_GRACE * 4; k++) click(targets[0] + k * beatLen(c), k % 4 === 0, 0.3)
-    run.current = { targets, beat: beatLen(c), taps: [], bpm: c.bpm }
+    for (let k = 1; k <= bars; k++) targets.push(at + barTime(c, n + k) - from)
+    const clicks = st.click === 'all' ? bars * 4 : st.click === 'lead' ? st.lead * 4 : 0
+    for (let k = 0; k < clicks; k++) click(targets[0] + k * beatLen(c), k % 4 === 0, 0.3)
+    run.current = { targets, lead: st.lead, beat: beatLen(c), taps: [], bpm: c.bpm }
     setRating(null)
-    setDots(targets.slice(DB_GRACE).map(() => null))
+    setDots(targets.slice(st.lead).map(() => null))
     setPhase('playing')
     endTimer.current = window.setTimeout(() => score(), (end - from + 0.4) * 1000)
   }
 
   const score = () => {
-    const { targets, beat, taps, bpm } = run.current
-    const scored = targets.slice(DB_GRACE)
+    const { targets, lead, beat, taps } = run.current
+    const scored = targets.slice(lead)
     const used = new Set<number>()
     const errs = scored.map((t) => {
       let bi = -1
@@ -253,15 +275,40 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
     })
     const firstScored = scored[0] - beat / 2
     const extras = taps.filter((x, k) => !used.has(k) && x > firstScored).length
-    const pts = errs.reduce<number>((s, e) => s + (e === null ? 0 : tapCredit(e, beat)), 0)
-    const sc = Math.round(clamp((pts - extras * 0.5) / scored.length, 0, 1) * 1000)
-    setReport({ score: sc, errs, extras, bpm, beat })
+    const credit = errs.reduce<number>((s, e) => s + (e === null ? 0 : tapCredit(e, beat)), 0)
+    const pts = clamp(credit - extras * 0.5, 0, scored.length)
+    setStages((all) => {
+      const next = [...all]
+      next[si] = { errs, extras, pts }
+      return next
+    })
     setDots(errs.map(tapGrade))
-    setPhase('done')
+    setPhase('result')
+  }
+
+  const finish = (all: (DbStage | null)[]) => {
+    const errs = DB_STAGES.flatMap((x, k) => all[k]?.errs ?? Array<null>(x.scored).fill(null))
+    const pts = all.reduce((s, x) => s + (x?.pts ?? 0), 0)
+    const ok = errs.filter((e) => e !== null && Math.abs(e) <= TAP_GOOD).length
+    const passed = all.map((x, k) => !!x && x.errs.filter((e) => e !== null && Math.abs(e) <= TAP_GOOD).length >= Math.ceil(DB_STAGES[k].scored * 0.75))
+    onDone(Math.round((pts / DB_TOTAL) * 1000), { ...tapDetail(errs), right: ok, total: errs.length, bestStreak: longestRun(passed) })
+  }
+  const nextStage = (all = stages) => {
+    stopAll()
+    if (last) return finish(all)
+    setSi(si + 1)
+    setPhase('ready')
+  }
+  const skip = () => {
+    clearTimeout(endTimer.current)
+    const all = [...stages]
+    all[si] = null
+    setStages(all)
+    nextStage(all)
   }
 
   const onPad = useTaps((t) => {
-    const { targets, beat, taps } = run.current
+    const { targets, lead, beat, taps } = run.current
     taps.push(t)
     setFlash((f) => f + 1)
     // more than half a beat from every downbeat is not on the 1 at all
@@ -270,25 +317,36 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
     setRating((prev) => ({ ...r, n: (prev?.n ?? 0) + 1 }))
     // fill the dot of the bar this tap landed on, keeping the best tap on each bar
     const k = targets.reduce((b, x, i) => (Math.abs(t - x) < Math.abs(t - targets[b]) ? i : b), 0)
-    if (k >= DB_GRACE && Math.abs(t - targets[k]) < beat / 2) {
+    if (k >= lead && Math.abs(t - targets[k]) < beat / 2) {
       const g = tapGrade(t - targets[k])
-      setDots((d) => d.map((x, i) => (i === k - DB_GRACE && (x === null || GRADE_RANK[g] < GRADE_RANK[x]) ? g : x)))
+      setDots((d) => d.map((x, i) => (i === k - lead && (x === null || GRADE_RANK[g] < GRADE_RANK[x]) ? g : x)))
     }
   }, phase === 'playing')
 
-  const scoredBars = DB_BARS - 1 - DB_GRACE
-  const pass = Math.ceil(scoredBars * 0.75)
+  const stageStrip = (
+    <ol className="db-stages" aria-label="Stages">
+      {DB_STAGES.map((x, k) => {
+        const r = stages[k]
+        const state = k === si ? 'now' : r ? 'done' : k < si ? 'skipped' : ''
+        return (
+          <li key={x.name} className={state} aria-current={k === si ? 'step' : undefined}>
+            <span>{x.name}</span>
+            <span className="tabular muted">{r ? `${Math.round((r.pts / x.scored) * 100)}%` : k < si ? 'skipped' : `${x.scored} bars`}</span>
+          </li>
+        )
+      })}
+    </ol>
+  )
 
   let content: React.ReactNode
   if (phase === 'ready' || phase === 'loading')
     content = (
       <div className="center">
         <p>
-          The track starts on a random beat. Find the 1 and tap it every bar for {DB_BARS} bars. For the first {DB_GRACE} bars a click counts you in, high on the 1;
-          those bars are free. Then the click stops and scoring starts: {pass} of {scoredBars} bars Perfect or Good to pass.
+          <b>{st.name}.</b> {st.help} {st.scored} bars count; {pass} Perfect or Good to pass.
         </p>
         <button className="primary big" onClick={begin} disabled={phase === 'loading'}>
-          {phase === 'loading' ? 'Loading…' : 'Start'}
+          {phase === 'loading' ? 'Loading…' : `Play stage ${si + 1}`}
         </button>
       </div>
     )
@@ -300,14 +358,14 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
       </div>
     )
   else {
-    const { errs, extras, score: sc, bpm, beat } = report!
+    const { errs, extras } = stages[si]!
+    const { bpm, beat } = run.current
     const c = gradeCounts(errs)
     const ok = c.perfect + c.good
     const hits = errs.filter((e): e is number => e !== null)
     const meanAbs = hits.length ? hits.reduce((s, e) => s + Math.abs(e), 0) / hits.length : 0
-    const meanSigned = hits.length ? hits.reduce((s, e) => s + e, 0) / hits.length : 0
     const verdict: RoundDesc =
-      ok >= errs.length - 1 && c.perfect >= errs.length / 2 && extras === 0
+      ok === errs.length && c.perfect >= errs.length / 2 && extras === 0
         ? { verdict: 'Locked', tone: 'good', explain: '' }
         : ok >= pass
           ? { verdict: 'Solid', tone: 'ok', explain: '' }
@@ -315,20 +373,16 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
     verdict.explain =
       `${ok} of ${errs.length} bars Perfect or Good (pass mark ${pass})${c.miss ? `, ${c.miss} missed` : ''}` +
       (hits.length ? `, mean error ${Math.round(meanAbs * 1000)} ms` : '') +
-      `, ${plural(extras, 'extra tap')}. At ${Math.round(bpm * 10) / 10} BPM a bar lasts ${(beat * 4).toFixed(2)} s: four beats of ${Math.round(beat * 1000)} ms, so the 1 comes back every ${(beat * 4).toFixed(2)} s.`
+      `, ${plural(extras, 'extra tap')}. At ${Math.round(bpm * 10) / 10} BPM the 1 comes back every ${(beat * 4).toFixed(2)} s.`
     verdict.tip =
       latencyTip(errs) ??
-      (hits.length >= 4 && Math.abs(meanSigned) > 0.02 && Math.abs(meanSigned) > meanAbs * 0.7
-        ? `You were consistently ${meanSigned < 0 ? 'early' : 'late'} by about ${Math.round(Math.abs(meanSigned) * 1000)} ms, even with your latency calibration. Recalibrate in Profile → Tap latency if your setup changed.`
-        : verdict.verdict === 'Lost the 1'
-          ? 'Count 1 2 3 4 out loud with the kick. The 1 is where the bass note changes and crashes land; the snare or clap sits on 2 and 4, never on the 1.'
-          : 'Tap with the kick, not just before it: aim to hear the tap and the kick as one sound.')
+      (verdict.verdict === 'Lost the 1'
+        ? 'Count 1 2 3 4 out loud with the kick. The 1 is where the bass note changes and crashes land; the clap sits on 2 and 4, never on the 1.'
+        : 'Tap with the kick, not just before it: aim to hear the tap and the kick as one sound.')
     content = (
       <div className="center">
         <Verdict d={verdict} />
         <GradeDots grades={dots} pass={pass} />
-        <Tally errs={errs} />
-        <TapTimeline errs={errs} />
         <div className="errs">
           {errs.map((e, k) => (
             <span key={k} className={ERR_CLASS[tapGrade(e)]}>
@@ -336,13 +390,22 @@ export function DownbeatTapper({ source, onDone }: DrillProps) {
             </span>
           ))}
         </div>
-        <button className="primary" onClick={() => onDone(sc, { ...tapDetail(errs), right: ok, total: errs.length })} autoFocus>
-          Continue
-        </button>
+        <div className="row">
+          <button onClick={begin}>Retry stage</button>
+          <button className="primary" onClick={() => nextStage()} autoFocus>
+            {last ? 'Finish' : `Next: ${DB_STAGES[si + 1].name}`} <kbd>↵</kbd>
+          </button>
+        </div>
       </div>
     )
   }
-  return <Swap k={phase === 'loading' ? 'ready' : phase}>{content}</Swap>
+  return (
+    <div className="center">
+      {stageStrip}
+      <Swap k={`${si}-${phase === 'loading' ? 'ready' : phase}`}>{content}</Swap>
+      {phase !== 'result' && <Skip onSkip={skip} last={last} what="stage" />}
+    </div>
+  )
 }
 
 // ---------- shared multi-round tap drill ----------

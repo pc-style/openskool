@@ -20,7 +20,7 @@ const SCOPE_SAFE = new Set(['sync', 'downbeat', 'drop', 'phrase', 'tempomatch'])
 /** How long a run is, shown on the intro. */
 const LENGTH: Record<string, string> = {
   timefeel: '6 rounds · ~2 min',
-  downbeat: '16 bars · ~1 min',
+  downbeat: '4 stages · ~2 min',
   bpmmath: '10 questions · ~2 min',
   sync: '6 rounds · ~2 min',
   tempomatch: '3 rounds · ~3 min',

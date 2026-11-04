@@ -161,3 +161,37 @@
 .phase-readout {
   color: var(--foreground);
 }
+
+/* Downbeat Tapper: the four stages, current one marked */
+.db-stages {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  text-align: left;
+}
+.db-stages li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 2px solid var(--border);
+  color: var(--muted-foreground);
+}
+.db-stages li.done {
+  border-top-color: var(--muted-foreground);
+}
+.db-stages li.now {
+  border-top-color: var(--lime);
+  color: var(--foreground);
+}
+@media (max-width: 560px) {
+  .db-stages li span:first-child {
+    font-size: 0.78rem;
+  }
+}
