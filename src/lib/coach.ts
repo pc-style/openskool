@@ -8,6 +8,8 @@ import { best, dayKey, longestStreak, plays, RANKS, xpOf, type State } from './p
 export interface PlanItem {
   drill: string
   reason: string
+  /** The reason in a few words, for one line in a table; `reason` holds the full sentence. */
+  short: string
   /** The tempo world to play it in, for missions that name one. */
   genre?: Genre
 }
@@ -88,8 +90,8 @@ export function plan(s: State, now = Date.now()): PlanDay[] {
     const items: PlanItem[] = []
     // open missions have their own slot, so the other slots leave them alone
     const free = (id: string) => !items.some((x) => x.drill === id) && (uses.get(id) ?? 0) < 2 && !open.some((m) => m.drill === id)
-    const add = (id: string, reason: string, genre?: Genre) => {
-      items.push({ drill: id, reason, genre })
+    const add = (id: string, short: string, reason: string, genre?: Genre) => {
+      items.push({ drill: id, short, reason, genre })
       uses.set(id, (uses.get(id) ?? 0) + 1)
     }
     // prefer what the plan has used least, then something you did not see yesterday; ties keep priority order
@@ -104,7 +106,7 @@ export function plan(s: State, now = Date.now()): PlanDay[] {
       if (items.some((x) => x.drill === m.drill)) return false
       const b = missionBest(s, m)
       const where = m.genre ? ` in ${GENRES[m.genre].name} ${GENRES[m.genre].bpm}` : ''
-      add(m.drill, `Week ${week.n} mission: score ${m.min}+${where}. ${b ? `Your best${where ? ' there' : ''} is ${b}, ${m.min - b} to go.` : 'Not played yet.'}`, m.genre)
+      add(m.drill, `Week ${week.n} mission${where}`, `Week ${week.n} mission: score ${m.min}+${where}. ${b ? `Your best${where ? ' there' : ''} is ${b}, ${m.min - b} to go.` : 'Not played yet.'}`, m.genre)
       return true
     }
     const weak = () => {
@@ -114,7 +116,7 @@ export function plan(s: State, now = Date.now()): PlanDay[] {
           .sort((a, b) => (a.f ?? 0) - (b.f ?? 0))
         const d = choose(ds)
         if (!d) continue
-        add(d.id, `${sk} is your ${ordinal[r]} skill (${Math.round(levels[sk]!)}/1000). ${d.f === null ? 'You have not tried this drill yet.' : `Recent form here: ${Math.round(d.f)}.`}`)
+        add(d.id, r ? `${sk}, a weak skill` : `${sk}, your weakest skill`, `${sk} is your ${ordinal[r]} skill (${Math.round(levels[sk]!)}/1000). ${d.f === null ? 'You have not tried this drill yet.' : `Recent form here: ${Math.round(d.f)}.`}`)
         return true
       }
       return false
@@ -124,13 +126,13 @@ export function plan(s: State, now = Date.now()): PlanDay[] {
       const d = choose(due)
       if (!d) return false
       const ago = Math.floor((date - lastPlayed(s, d.id)) / DAY)
-      add(d.id, `Spaced review: last played ${ago} day${ago === 1 ? '' : 's'} ago${i ? ' by then' : ''}, best ${best(s, d.id)}.`)
+      add(d.id, `Review · ${ago} day${ago === 1 ? '' : 's'} since you played it`, `Spaced review: last played ${ago} day${ago === 1 ? '' : 's'} ago${i ? ' by then' : ''}, best ${best(s, d.id)}.`)
       return true
     }
     const fresh = () => {
       const d = choose(untried)
       if (!d) return false
-      add(d.id, newReason(week, d.id))
+      add(d.id, 'New to you', newReason(week, d.id))
       return true
     }
 

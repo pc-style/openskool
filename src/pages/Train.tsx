@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { GENRES, type Genre } from '../audio/synth'
 import { Swap, Value } from '../components/Swap'
@@ -25,6 +25,13 @@ export function Train() {
   const where: Genre | 'mine' = s.settings.source === 'mine' ? 'mine' : s.settings.genre
   const xp = xpOf(s, missionsDone(s))
   const reached = worldAt(xp).index
+  // on phones the tempo rail scrolls: keep the picked world in view
+  const rail = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const on = rail.current?.querySelector<HTMLElement>('.seg.on')
+    const r = rail.current
+    if (on && r && r.scrollWidth > r.clientWidth) r.scrollTo({ left: r.scrollLeft + on.getBoundingClientRect().left - r.getBoundingClientRect().left - 16 })
+  }, [where, tab])
   const whereName = where === 'mine' ? 'your tracks' : `${GENRES[where].name} ${GENRES[where].bpm}`
   return (
     <div>
@@ -34,14 +41,14 @@ export function Train() {
           Showing {skill} only · <Link to="/train">All drills</Link>
         </p>
       )}
-      <div className="seg-group train-tabs" role="tablist" aria-label="Drill type" hidden={!!skill}>
+      <div className="train-tabs" role="tablist" aria-label="Drill type" hidden={!!skill}>
         {(
           [
             ['ear', 'Ear & timing'],
             ['knowledge', 'Knowledge'],
           ] as const
         ).map(([t, name]) => (
-          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'seg on' : 'seg'} onClick={() => setParams(t === 'ear' ? {} : { tab: t }, { replace: true })}>
+          <button key={t} role="tab" aria-selected={tab === t} className="tab" onClick={() => setParams(t === 'ear' ? {} : { tab: t }, { replace: true })}>
             {name}
           </button>
         ))}
@@ -50,7 +57,7 @@ export function Train() {
         {tab === 'ear' ? (
           <>
             <p className="muted page-intro">Listening and timing drills. Faster tempos are harder and pay more XP.</p>
-            <div className="world-picker">
+            <div className="world-picker" ref={rail}>
               <div className="seg-group" role="group" aria-label="Tempo world">
                 {WORLDS.map((w, i) => (
                   <button

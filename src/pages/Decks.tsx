@@ -100,6 +100,8 @@ export function Decks() {
     return { master, chans: [makeChannel(master), makeChannel(master)] }
   })
   const [xf, setXf] = useState(0)
+  // phones show one panel at a time; every panel stays mounted, so a deck keeps playing while you look at another
+  const [view, setView] = useState<'a' | 'mix' | 'b'>('a')
   const [mix, setMix] = useState<[Mix, Mix]>([FLAT, FLAT])
   useEffect(() => {
     master.connect(out())
@@ -148,8 +150,21 @@ export function Decks() {
   return (
     <div className="decks-page">
       <h1>Decks</h1>
-      <p className="muted">Practise blends with your tracks: tempo with key lock, nudge, hot cues, beat loops and a 3-band mixer. Use headphones or speakers.</p>
-      <div className="decks">
+      <p className="muted page-intro">Two decks and a mixer for practising blends. Use headphones or speakers.</p>
+      <div className="seg-group deck-tabs" role="group" aria-label="Show">
+        {(
+          [
+            ['a', 'Deck A'],
+            ['mix', 'Mixer'],
+            ['b', 'Deck B'],
+          ] as const
+        ).map(([v, label]) => (
+          <button key={v} className={view === v ? 'seg on' : 'seg'} aria-pressed={view === v} onClick={() => setView(v)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="decks" data-view={view}>
         {deck(0)}
         <section className="mixer" aria-label="Mixer">
           <div className="strips">
@@ -564,7 +579,7 @@ function Deck({
         {t?.peaks ? (
           <DitherWave
             peaks={t.peaks}
-            height={64}
+            height={176}
             progress={pos / dur}
             head
             window={loop ? [loop.a / dur, loop.b / dur] : undefined}
@@ -572,7 +587,7 @@ function Deck({
             onSeek={(fr) => (el.current.currentTime = fr * dur)}
           />
         ) : (
-          <div className="deck-wave-empty muted small">Load one of your tracks or a built-in groove</div>
+          <div className="deck-wave-empty muted small">No track loaded</div>
         )}
       </div>
       <div className="deck-info">

@@ -114,10 +114,12 @@ export function Today() {
                       <Link to={to} className="session-name">
                         {d.name}
                       </Link>
-                      <span className="muted small session-why">{it.reason}</span>
+                      <span className="muted small session-why" title={it.reason}>
+                        {it.short}
+                      </span>
                     </td>
-                    <td className="score-col mono">{b || '—'}</td>
-                    <td className="score-col mono muted">{m ? m.min : '—'}</td>
+                    <td className="score-col mono">{b || <span className="muted">–</span>}</td>
+                    <td className="score-col mono muted">{m ? m.min : '–'}</td>
                     <td className="play-col">
                       <Link to={to} className="button small" aria-label={`Play ${d.name}`}>
                         Play

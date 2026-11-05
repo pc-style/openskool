@@ -268,6 +268,39 @@
 .center > .swap.phase-body {
   align-self: stretch;
 }
+/* the figure the round is about leads the readout */
+.readout .hero dd {
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.readout .hero dd small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+.readout .hero ~ div dd {
+  font-size: 1rem;
+}
+.readout .hero {
+  flex: 1.6;
+}
+.tap-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 4px;
+  color: var(--muted-foreground);
+  font-size: 0.87rem;
+}
+/* Skip is the quiet third action, right under the controls */
+.deck > .row {
+  margin: 0;
+}
+.center > .skip {
+  margin-top: 0;
+}
 .readout .hot {
   color: var(--bad);
 }

@@ -65,8 +65,8 @@ export function BarCounter({
     <div className="barcounter" aria-hidden="true">
       {(label || (loop && unit === 'beat')) && (
         <div className="bc-label">
-          <span>{label}</span>
-          {loop && unit === 'beat' && <span>{bar ? `Bar ${bar}` : '\u00a0'}</span>}
+          {/* a looping beat strip counts the bar at its left; its cells are the beats 1 to 4 */}
+          <span>{label ?? (bar ? `Bar ${bar}` : '\u00a0')}</span>
         </div>
       )}
       <div className="bc-cells" style={{ gridTemplateColumns: `repeat(${cells}, 1fr)` }}>
@@ -76,8 +76,8 @@ export function BarCounter({
           const on = k === current && (!hidden || isTarget)
           return (
             <div key={k} className="bc-cell">
-              <i className={`${on ? 'on' : ''} ${hidden ? 'hidden' : ''} ${isTarget ? 'target' : ''}`}>{isTarget ? target.text : null}</i>
-              <small>{marks.get(k) ?? '\u00a0'}</small>
+              <i className={`${on ? 'on' : ''} ${hidden ? 'hidden' : ''} ${isTarget ? 'target' : ''}`}>{isTarget ? target.text : loop && unit === 'beat' ? k + 1 : null}</i>
+              <small className={marks.has(k) ? 'mark' : undefined}>{marks.get(k) ?? '\u00a0'}</small>
             </div>
           )
         })}

@@ -68,42 +68,69 @@ export function Profile() {
         </div>
       </div>
 
-      <div className="section-head">
-        <h2>Rank</h2>
-        <span className="muted small tabular">{rank.next ? `${(rank.next.xp - xp).toLocaleString()} XP to ${rank.next.name}` : 'Top rank'}</span>
+      <h2>Rank</h2>
+      {/* where you are and the next step first; the whole ladder is one click away */}
+      <div className="rank-now">
+        <p className="rank-names">
+          {rank.name}
+          {rank.next && <span className="muted"> → {rank.next.name}</span>}
+        </p>
+        {rank.next && <DMeter value={(xp - rank.xp) / (rank.next.xp - rank.xp)} height={8} label={`${xp - rank.xp} of ${rank.next.xp - rank.xp} XP through ${rank.name}`} />}
+        <p className="muted small tabular">
+          {xp.toLocaleString()} XP{rank.next ? ` · ${(rank.next.xp - xp).toLocaleString()} to go` : ' · the top rank'}
+        </p>
       </div>
-      <ol className="list ladder">
-        {RANKS.map((r, k) => {
-          const here = k === rank.index
-          const next = RANKS[k + 1]
-          return (
-            <li key={r.name} className={here ? 'here' : k < rank.index ? 'passed' : ''} aria-current={here ? 'step' : undefined}>
-              <span className="ladder-name">{r.name}</span>
-              {/* every rank you have reached shows its bar: full behind you, filling where you are */}
-              <span className="ladder-bar">
-                {k < rank.index && <DMeter value={1} height={6} label={`${r.name} complete`} />}
-                {here && next && <DMeter value={(xp - r.xp) / (next.xp - r.xp)} height={6} label={`${xp - r.xp} of ${next.xp - r.xp} XP through ${r.name}`} />}
-              </span>
-              <span className="muted small tabular">{here ? `You · ${xp.toLocaleString()} XP` : `${r.xp.toLocaleString()} XP`}</span>
-            </li>
-          )
-        })}
-      </ol>
+      <details className="disclosure">
+        <summary>All ranks</summary>
+        <ol className="ladder">
+          {RANKS.map((r, k) => {
+            const here = k === rank.index
+            return (
+              <li key={r.name} className={here ? 'here' : k < rank.index ? 'passed' : ''} aria-current={here ? 'step' : undefined}>
+                <span className="ladder-mark" aria-hidden="true">
+                  {k < rank.index ? '✓' : here ? '•' : ''}
+                </span>
+                <span className="ladder-name">{r.name}</span>
+                <span className="tabular">{r.xp.toLocaleString()} XP</span>
+              </li>
+            )
+          })}
+        </ol>
+      </details>
 
       <div className="section-head">
         <h2>Badges</h2>
         <span className="muted small tabular">
-          {bs.filter((b) => b.earned).length} of {bs.length}
+          {bs.filter((b) => b.earned).length} of {bs.length} earned
         </span>
       </div>
-      <ul className="badges">
-        {[...bs.filter((b) => b.earned), ...bs.filter((b) => !b.earned)].map((b) => (
-          <li key={b.id} className={b.earned ? 'earned' : ''}>
-            <b>{b.name}</b>
-            <span>{b.how}</span>
-          </li>
-        ))}
-      </ul>
+      {bs.some((b) => b.earned) && (
+        <ul className="badges">
+          {bs
+            .filter((b) => b.earned)
+            .map((b) => (
+              <li key={b.id} className="earned">
+                <b>{b.name}</b>
+                <span>{b.how}</span>
+              </li>
+            ))}
+        </ul>
+      )}
+      {bs.some((b) => !b.earned) && (
+        <>
+          <h3 className="to-earn-head">Still to earn</h3>
+          <ul className="to-earn">
+            {bs
+              .filter((b) => !b.earned)
+              .map((b) => (
+                <li key={b.id}>
+                  <b>{b.name}</b>
+                  <span>{b.how}</span>
+                </li>
+              ))}
+          </ul>
+        </>
+      )}
 
       <h2>Settings</h2>
       <div className="list settings">

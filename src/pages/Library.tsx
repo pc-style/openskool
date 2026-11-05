@@ -23,7 +23,7 @@ const busyLabel = (
 const idleLabel = (
   <div className="drop-stack">
     <strong className="drop-hover">Drop audio files here</strong>
-    <span className="button">Choose audio files</span>
+    <span className="button primary">Choose audio files</span>
     <span className="drop-sub">MP3, WAV, FLAC, AAC or OGG</span>
   </div>
 )
@@ -82,7 +82,12 @@ export function Library() {
         </Reserve>
         <input ref={input} type="file" accept="audio/*" multiple hidden onChange={(e) => onFiles(e.target.files)} />
       </div>
-      {tracks.length === 0 && <p className="muted small">Installed openskool (Add to Home Screen)? You can also share audio to it from other apps.</p>}
+      {tracks.length === 0 && (
+        <details className="disclosure">
+          <summary>Other ways to import</summary>
+          <p className="muted small">Installed openskool (Add to Home Screen)? You can also share audio to it from other apps.</p>
+        </details>
+      )}
       {tracks.length > 0 && (
         <>
           <div className="section-head">

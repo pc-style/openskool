@@ -221,12 +221,12 @@ interface DbStage {
   /** Credit for the stage, 0 to `scored` bars. */
   pts: number
 }
-/** The deck's readout column: label over a mono value, one per row. */
-function Readout({ items }: { items: Record<string, React.ReactNode> }) {
+/** Labelled live figures beside the pad. `hero` names the one figure the round is about; it reads first and largest. */
+function Readout({ items, hero }: { items: Record<string, React.ReactNode>; hero?: string }) {
   return (
     <dl className="readout mono">
       {Object.entries(items).map(([k, v]) => (
-        <div key={k}>
+        <div key={k} className={k === hero ? 'hero' : undefined}>
           <dt>{k}</dt>
           <dd>{v}</dd>
         </div>
@@ -934,10 +934,15 @@ export function TapTempo({ source, onDone }: DrillProps) {
         <div className="deck-main">
           <TapPad onPointerDown={onPad} label="Tap every beat" flash={n} />
           <Readout
+            hero="Estimate"
             items={{
-              Round: `${i + 1} / ${ROUNDS}`,
+              Estimate: (
+                <>
+                  <Value v={on && guess !== null ? guess.toFixed(1) : '–'} w={5} start /> <small>BPM</small>
+                </>
+              ),
+              Round: `${i + 1} of ${ROUNDS}`,
               Taps: <Value v={n} />,
-              Estimate: <Value v={on && guess !== null ? guess.toFixed(1) : '—'} />,
             }}
           />
         </div>
@@ -951,26 +956,26 @@ export function TapTempo({ source, onDone }: DrillProps) {
           >
             Reset
           </button>
-          <button className="primary" onClick={submit} disabled={n < TT_MIN}>
-            {/* both labels share one slot, so Reset beside it stays put */}
-            <Reserve
-              inline
-              shape={[
-                `Tap ${TT_MIN} more`,
-                <>
-                  Lock in <kbd>↵</kbd>
-                </>,
-              ]}
-            >
-              {n < TT_MIN ? (
-                `Tap ${TT_MIN - n} more`
-              ) : (
-                <>
-                  Lock in <kbd>↵</kbd>
-                </>
-              )}
-            </Reserve>
-          </button>
+          {/* until there are enough taps the slot says how many are left; then it becomes the button. One slot, so Reset stays put */}
+          <Reserve
+            inline
+            shape={[
+              <span key="s" className="tap-status">{TT_MIN} more taps to lock in</span>,
+              <button key="b" className="primary">
+                Lock in <kbd>↵</kbd>
+              </button>,
+            ]}
+          >
+            {n < TT_MIN ? (
+              <span className="tap-status" role="status">
+                {TT_MIN - n} more {TT_MIN - n === 1 ? 'tap' : 'taps'} to lock in
+              </span>
+            ) : (
+              <button className="primary" onClick={submit}>
+                Lock in <kbd>↵</kbd>
+              </button>
+            )}
+          </Reserve>
         </div>
       </div>
     )

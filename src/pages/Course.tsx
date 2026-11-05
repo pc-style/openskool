@@ -45,8 +45,8 @@ export function Course() {
                   <span className="wp-meter">
                     <DMeter value={md / all} height={6} label={`${md} of ${all} done`} />
                   </span>
-                  <span className="tabular">
-                    {md}/{all}
+                  <span className="tabular" title="Missions and practice tasks done">
+                    {md} of {all}
                   </span>
                 </span>
                 <span className="chev" aria-hidden="true" />
@@ -76,7 +76,10 @@ export function Course() {
                               <b>{m.text}</b>
                               <span className="muted"> · in the app</span>
                             </span>
-                            <span className="mission-meter muted small">{ok ? 'Done' : 'Not yet'}</span>
+                            <span className="mission-meter">
+                              <span className="mm-bar" />
+                              <span className="muted small">{ok ? 'Done' : 'Not yet'}</span>
+                            </span>
                             <Link to={m.to} className="button small">
                               {ok ? 'Open' : 'Go'}
                             </Link>
@@ -89,15 +92,12 @@ export function Course() {
                           {mark}
                           <span className="mission-text">
                             <b>{d.name}</b>
-                            <span className="muted">
-                              {' '}
-                              · score {m.min}+{m.genre && ` in ${GENRES[m.genre].name} ${GENRES[m.genre].bpm}`}
-                            </span>
+                            {m.genre && <span className="muted"> · in {GENRES[m.genre].name} {GENRES[m.genre].bpm}</span>}
                           </span>
                           <span className="mission-meter">
                             <span className="mm-bar">{b > 0 && <DMeter value={b / m.min} height={6} color={ok ? 'green' : 'ink'} label={`Best ${b} of ${m.min}`} />}</span>
-                            <span className="muted small tabular">
-                              {b || '—'} / {m.min}
+                            <span className="muted small tabular" title={`Your best against the target of ${m.min}`}>
+                              {b ? <span className="fg">{b}</span> : '–'} / {m.min}
                             </span>
                           </span>
                           <Link to={missionLink(m)} className="button small">

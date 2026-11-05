@@ -95,6 +95,8 @@ export function ChoiceDrill({
 }) {
   const [i, setI] = useState(0)
   const [round, setRound] = useState<ChoiceRound | null>(null)
+  // the round index `round` was made for: until the new round is ready, the last one is not shown under the new index
+  const [roundI, setRoundI] = useState(-1)
   const [picked, setPicked] = useState<string | null>(null)
   const [right, setRight] = useState(0)
   const [wrong, setWrong] = useState(0)
@@ -146,6 +148,7 @@ export function ChoiceDrill({
     Promise.resolve(make(i)).then((r) => {
       if (!live) return
       setRound(r)
+      setRoundI(i)
       setLocked(!!r.play)
       begin(r, true)
     })
@@ -240,17 +243,23 @@ export function ChoiceDrill({
   const answerLabel = round?.options.find((o) => o.id === round.answer)?.label
   const nw = timed ? 2 : String(rounds).length
 
-  /** The answer's feedback. Both versions are laid out invisibly before the answer, so answering does not grow the drill. */
-  const feedback = (r: ChoiceRound, ok: boolean, live = false) => (
-    <div className={live ? 'feedback fade-in' : 'feedback'} role={live ? 'status' : undefined}>
-      <p>
-        <strong className={ok ? 'good' : 'bad'}>{ok ? 'Correct. ' : 'Not quite. '}</strong>
-        {r.explain}
-      </p>
-      {r.tip && <p className="tip">{r.tip}</p>}
-      {r.visual}
-    </div>
+  /**
+   * The answer's feedback: the verdict right under the options, the coaching after Next. Both versions
+   * are laid out invisibly before the answer, so answering does not grow the drill.
+   */
+  const verdict = (r: ChoiceRound, ok: boolean, live = false) => (
+    <p className={live ? 'feedback fade-in' : 'feedback'} role={live ? 'status' : undefined}>
+      <strong className={ok ? 'good' : 'bad'}>{ok ? 'Correct. ' : 'Not quite. '}</strong>
+      {r.explain}
+    </p>
   )
+  const coaching = (r: ChoiceRound, live = false) =>
+    (r.tip || r.visual) && (
+      <div className={live ? 'coaching fade-in' : 'coaching'}>
+        {r.tip && <p className="tip">{r.tip}</p>}
+        {r.visual}
+      </div>
+    )
   const skipButton = (
     <button className="ghost" onClick={skip}>
       Skip <kbd>S</kbd>
@@ -288,8 +297,8 @@ export function ChoiceDrill({
           </span>
         </span>
       </div>
-      <Swap k={round ? `r${i}` : `l${i}`} hold>
-      {!round ? (
+      <Swap k={round && roundI === i ? `r${i}` : `l${i}`} hold>
+      {!round || roundI !== i ? (
         <div className="loading">Preparing audio…</div>
       ) : (
         <>
@@ -317,6 +326,11 @@ export function ChoiceDrill({
               )
             })}
           </div>
+          {!timed && (
+            <Reserve shape={[verdict(round, true), verdict(round, false)]}>
+              {picked && verdict(round, picked === round.answer, true)}
+            </Reserve>
+          )}
           <div className="row">
             {round.play && (
               <button className="ghost" onClick={() => begin(round, false)}>
@@ -338,11 +352,7 @@ export function ChoiceDrill({
               {picked && picked !== round.answer ? <>Answer: {answerLabel}</> : '\u00a0'}
             </p>
           )}
-          {!timed && (
-            <Reserve shape={[feedback(round, true), feedback(round, false)]}>
-              {picked && feedback(round, picked === round.answer, true)}
-            </Reserve>
-          )}
+          {!timed && (round.tip || round.visual) && <Reserve shape={coaching(round)}>{picked && coaching(round, true)}</Reserve>}
         </>
       )}
       </Swap>

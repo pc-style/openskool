@@ -84,11 +84,14 @@
   margin: 0;
 }
 .intro-head {
-  margin: 32px 0 8px;
+  margin: 24px 0 8px;
   font-size: 0.867rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0;
-  color: var(--muted-foreground);
+  color: var(--foreground);
+}
+.intro .teach b {
+  font-weight: 600;
 }
 .intro .teach {
   margin-top: 0;
@@ -107,21 +110,49 @@
     min-width: 0;
   }
   .drill-page h1 {
+    font-size: 1.5rem;
     margin-bottom: 2px;
+  }
+  .drill-page .crumbs {
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+  }
+  /* the round, not the page furniture, gets the first screen */
+  .drill-page .stage-bar {
+    margin-block: -12px 0;
+  }
+  .drill-page .prompt {
+    margin: 8px auto 14px;
   }
 }
 
 /* ---------- results ---------- */
 
+.results-label {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+/* the ring and what it means sit side by side, on the column's left edge like every drill screen */
+.results-head {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
 .results-lines {
-  margin-top: 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
 }
 .results-lines p {
   margin: 0;
+}
+.results-facts {
+  font-size: 1.067rem;
+  font-weight: 550;
 }
 .unlock {
   display: inline-flex;
@@ -137,30 +168,12 @@
   border-radius: 50%;
   background: var(--lime);
 }
-.xp-box {
-  margin-top: 20px;
-  width: min(360px, 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-.xp-box p {
-  margin: 0;
-}
-.xp-total {
-  font-weight: 500;
-}
-.xp-total .small {
-  font-weight: 400;
-  margin-left: 6px;
-}
 .xp-rank {
-  width: 100%;
+  margin-top: 4px;
+  width: min(280px, 100%);
   display: flex;
   flex-direction: column;
   gap: 6px;
-  align-items: center;
 }
 .xp-rank .dmeter {
   flex: none;
@@ -168,60 +181,113 @@
 }
 .results-actions {
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-top: 28px;
+  gap: 8px;
 }
 .misses {
-  margin-top: 28px;
-  width: min(560px, 100%);
-  text-align: left;
+  margin-top: 36px;
+  width: min(720px, 100%);
+}
+.misses-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 .misses h3 {
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-.misses ul {
-  list-style: none;
-  padding: 0;
+  font-weight: 600;
   margin: 0;
 }
-.misses li {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 0;
+.link-button {
+  padding: 2px 0;
+  border: 0;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  font-size: 0.87rem;
 }
-.misses li + li {
-  border-top: 1px solid var(--border);
+.link-button:hover:not(:disabled) {
+  background: transparent;
+  color: var(--foreground);
+}
+.miss-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93rem;
+}
+.miss-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  padding: 0 12px 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.miss-table td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.miss-table td:not(:first-child),
+.miss-table th:not(:first-child) {
+  width: 22%;
+}
+.miss-table td:first-child {
+  color: var(--muted-foreground);
+}
+@media (max-width: 560px) {
+  .results-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .results-actions .button.primary {
+    flex-basis: 100%;
+  }
 }
 
 /* ---------- profile ---------- */
 
+.rank-now {
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rank-now p {
+  margin: 0;
+}
+.rank-names {
+  font-size: 1.067rem;
+  font-weight: 600;
+}
 .ladder {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 8px 0 0;
+  max-width: 480px;
 }
 .ladder li {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
-  padding: 12px 0;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 8px 0;
+  font-size: 0.93rem;
   color: var(--muted-foreground);
 }
-.ladder-bar {
-  max-width: 320px;
-}
-.ladder li.passed {
-  color: var(--foreground);
+.ladder li + li {
+  border-top: 1px solid var(--border);
 }
 .ladder li.here {
   color: var(--foreground);
-  font-weight: 500;
+  font-weight: 550;
 }
-.ladder li.here .small {
-  color: var(--foreground);
-  font-weight: 400;
+.ladder-mark {
+  color: var(--muted-foreground);
+}
+.ladder li.here .ladder-mark {
+  color: var(--lime);
 }
 .badges {
   list-style: none;
@@ -232,55 +298,56 @@
   gap: 8px;
 }
 .badges li {
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-radius: 10px;
+  background: var(--card);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  color: var(--muted-foreground);
   font-size: 0.867rem;
-}
-/* still to earn: quiet, no box */
-.badges li:not(.earned) {
-  opacity: 0.6;
+  color: var(--muted-foreground);
 }
 .badges li b {
-  font-weight: 550;
-  font-size: 0.933rem;
-}
-.badges li.earned {
-  background: var(--card);
-  border-color: var(--border);
-  color: var(--foreground);
-}
-.badges li.earned b {
   display: inline-flex;
   gap: 8px;
   align-items: center;
+  font-weight: 550;
+  font-size: 0.933rem;
+  color: var(--foreground);
 }
-.badges li.earned b::before {
+.badges li b::before {
   content: '';
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--lime);
 }
-.badges li.earned span {
+/* badges still to earn: a quiet two-column list, readable, no boxes */
+.to-earn-head {
+  margin: 24px 0 8px;
+  font-size: 0.87rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.to-earn {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px 24px;
+  font-size: 0.867rem;
   color: var(--muted-foreground);
 }
-
-@media (max-width: 560px) {
-  .ladder li {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .ladder-bar {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-  .ladder-bar:empty {
-    display: none;
-  }
+.to-earn li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.to-earn b {
+  font-weight: 500;
+  color: var(--foreground);
 }
 
 /* ---------- course ---------- */
@@ -330,6 +397,28 @@
     padding-inline: 16px;
     overflow-x: auto;
     scrollbar-width: none;
+    /* the rail fades at the edge, so it reads as more to scroll, not as clipped */
+    mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  }
+  /* score beside the drill name; the description takes the full width under both */
+  .skill-group .list-row {
+    row-gap: 2px;
+  }
+  .skill-group .list-row > div:first-child {
+    display: contents;
+  }
+  .skill-group .list-row h3 {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+  }
+  .skill-group .list-row p {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .skill-group .list-row .meta {
+    grid-column: 2;
+    grid-row: 1;
   }
   .world-picker .seg-group {
     flex-wrap: nowrap;
@@ -366,8 +455,30 @@
   display: block;
   margin: 8px auto 0;
 }
+/* Ear & timing / Knowledge: text tabs over a rule, a rank above the boxed tempo filter */
 .train-tabs {
-  margin: 4px 0 16px;
+  display: flex;
+  gap: 24px;
+  margin: 12px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.train-tabs .tab {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 8px 0 10px;
+  margin-bottom: -1px;
+  color: var(--muted-foreground);
+  box-shadow: inset 0 -2px 0 transparent;
+  transition: color 150ms var(--ease), box-shadow 150ms var(--ease);
+}
+.train-tabs .tab:hover:not(:disabled) {
+  background: transparent;
+  color: var(--foreground);
+}
+.train-tabs .tab[aria-selected='true'] {
+  color: var(--foreground);
+  box-shadow: inset 0 -2px 0 var(--foreground);
 }
 
 /* ---------- studio: Today's session table ---------- */
