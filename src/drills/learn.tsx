@@ -283,7 +283,10 @@ export function CamelotLearn({ onQuiz }: LearnProps) {
           <div className="cam-cols">
             <CamelotWheel start={sel} onSelect={setSel} highlight={[{ code: boost, tone: 'boost' }]} />
             <div className="cam-panel" aria-live="polite">
-              <p className="muted small">Click any key.</p>
+              <p className="muted small">
+                <span className="pointer-fine">Click any key.</span>
+                <span className="pointer-touch">Tap any key.</span>
+              </p>
               <Swap k={sel} hold>
                 <p className="learn-lead">
                   {sel} · {keyName(sel)}

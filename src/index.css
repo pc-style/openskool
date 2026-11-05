@@ -443,9 +443,11 @@ button:disabled {
   outline: 2px solid var(--focus, var(--ring));
   outline-offset: 2px;
 }
-/* lime means right, progress or current; a filled button's focus ring is the plain foreground */
+/* lime means right, progress or current; a filled button's focus ring is one neutral band hugging its fill */
 .primary:focus-visible {
-  outline-color: var(--foreground);
+  outline: 2px solid var(--ring);
+  outline-offset: 0;
+  border-color: transparent;
 }
 .primary {
   background: var(--primary);
@@ -1831,6 +1833,7 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
 }
 /* an empty deck: its controls step back together, not as a row of separately faded buttons */
 .deck.empty .deck-info,
+.deck.empty .pitch-row,
 .deck.empty .transport,
 .deck.empty .pads {
   opacity: 0.45;

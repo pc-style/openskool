@@ -127,6 +127,9 @@
   .drill-page .stage-bar {
     margin-block: 4px 0;
   }
+  .drill-page .learn-stage {
+    padding-top: 0;
+  }
   .drill-page .prompt {
     margin: 8px auto 14px;
   }
