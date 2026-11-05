@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { GENRES, type Genre } from '../audio/synth'
 import { Swap, Value } from '../components/Swap'
@@ -7,7 +7,6 @@ import { DRILLS, hasWorlds, SKILLS } from '../lib/drills'
 import { missionsDone } from '../lib/course'
 import { best, bestIn, plays, updateSettings, useProgress, worldAt, WORLDS, xpOf } from '../lib/progress'
 
-const AUDIO_TAG = { mine: 'Your tracks', builtin: 'Built-in audio', none: 'Learn, then quiz' }
 type Tab = 'ear' | 'knowledge'
 
 export function Train() {
@@ -26,6 +25,13 @@ export function Train() {
   const where: Genre | 'mine' = s.settings.source === 'mine' ? 'mine' : s.settings.genre
   const xp = xpOf(s, missionsDone(s))
   const reached = worldAt(xp).index
+  // on phones the tempo rail scrolls: keep the picked world in view
+  const rail = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const on = rail.current?.querySelector<HTMLElement>('.seg.on')
+    const r = rail.current
+    if (on && r && r.scrollWidth > r.clientWidth) r.scrollTo({ left: r.scrollLeft + on.getBoundingClientRect().left - r.getBoundingClientRect().left - 16 })
+  }, [where, tab])
   const whereName = where === 'mine' ? 'your tracks' : `${GENRES[where].name} ${GENRES[where].bpm}`
   return (
     <div>
@@ -35,14 +41,14 @@ export function Train() {
           Showing {skill} only · <Link to="/train">All drills</Link>
         </p>
       )}
-      <div className="seg-group train-tabs" role="tablist" aria-label="Drill type" hidden={!!skill}>
+      <div className="train-tabs" role="tablist" aria-label="Drill type" hidden={!!skill}>
         {(
           [
             ['ear', 'Ear & timing'],
             ['knowledge', 'Knowledge'],
           ] as const
         ).map(([t, name]) => (
-          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'seg on' : 'seg'} onClick={() => setParams(t === 'ear' ? {} : { tab: t }, { replace: true })}>
+          <button key={t} role="tab" aria-selected={tab === t} className="tab" onClick={() => setParams(t === 'ear' ? {} : { tab: t }, { replace: true })}>
             {name}
           </button>
         ))}
@@ -50,10 +56,8 @@ export function Train() {
       <Swap k={tab}>
         {tab === 'ear' ? (
           <>
-            <p className="muted">
-              Listening and timing drills. Pick a tempo world: faster ones are harder and pay more XP. Most can also run on your own tracks.
-            </p>
-            <div className="world-picker">
+            <p className="muted page-intro">Listening and timing drills. Faster tempos are harder and pay more XP.</p>
+            <div className="world-picker" ref={rail}>
               <div className="seg-group" role="group" aria-label="Tempo world">
                 {WORLDS.map((w, i) => (
                   <button
@@ -73,7 +77,7 @@ export function Train() {
             </div>
           </>
         ) : (
-          <p className="muted">No music needed. Each one starts with an interactive lesson, then a quiz on what it taught. Skip to the quiz whenever you like.</p>
+          <p className="muted page-intro">No music needed. Each starts with a short lesson, then a quiz.</p>
         )}
       {SKILLS.filter((sk) => inTab.some((d) => d.skill === sk)).map((sk) => (
         <section key={sk} className="skill-group">
@@ -92,7 +96,8 @@ export function Train() {
                     <p>{d.blurb}</p>
                   </div>
                   <div className="meta">
-                    <span className="tag">{AUDIO_TAG[d.audio]}</span>
+                    {/* only the exceptions are labelled: drills that can't use the audio you picked */}
+                    {where === 'mine' && d.audio === 'builtin' && <span className="tag">Built-in audio</span>}
                     <span className="row-meter">{played ? <DMeter value={b / 1000} label={scoped ? `Best on ${whereName}: ${b} of 1000` : `Best ${b} of 1000`} /> : null}</span>
                     <span className="row-best tabular" title={scoped && played ? `Best on ${whereName}` : undefined}>
                       <Value v={label} />

@@ -230,13 +230,15 @@
   border-top: 1px solid var(--border);
 }
 .readout dt {
-  font-family: var(--font-ui);
   font-size: 0.8rem;
   color: var(--muted-foreground);
 }
 .readout dd {
   margin: 2px 0 0;
-  font-size: 1.05rem;
+  font-size: 1.25rem;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 .deck .grade-dots {
   align-self: center;
@@ -258,6 +260,25 @@
     border-left: 1px solid var(--border);
   }
 }
+/* phones: the estimate takes the full row, Round and Taps share the one under it */
+@media (max-width: 560px) {
+  .readout:has(.hero) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .readout .hero {
+    grid-column: 1 / -1;
+    padding-bottom: 8px;
+  }
+  .readout .hero + div {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .readout .hero ~ div {
+    border-top: 1px solid var(--border);
+    padding: 8px 6px 4px;
+  }
+}
 .deck .barcounter {
   width: 100%;
   max-width: none;
@@ -265,6 +286,47 @@
 /* the phase body always spans the column, so its width does not depend on which phase (or outgoing copy) it holds */
 .center > .swap.phase-body {
   align-self: stretch;
+}
+/* the figure the round is about leads the readout */
+.readout .hero dd {
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.readout .hero dd {
+  /* optical: a 36px figure's side bearing sits it right of the 12px label above it */
+  margin-left: -0.05em;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+.readout .hero dd small {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+.readout .hero ~ div dd {
+  font-size: 1rem;
+}
+.readout .hero {
+  flex: none;
+}
+.tap-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 4px;
+  color: var(--muted-foreground);
+  font-size: 0.87rem;
+}
+/* Skip is the quiet third action, right under the controls */
+.deck > .row {
+  margin: 0;
+}
+.center > .skip {
+  margin-top: -12px;
 }
 .readout .hot {
   color: var(--bad);

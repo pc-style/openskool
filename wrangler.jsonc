@@ -8,5 +8,7 @@
     // /library is the share-target and file-handler path; the app redirects it to /#/library
     "not_found_handling": "single-page-application"
   },
-  "routes": [{ "pattern": "openskool.pcstyle.dev", "custom_domain": true }]
+  "routes": [{ "pattern": "openskool.pcstyle.dev", "custom_domain": true }],
+  // branch builds run `wrangler preview`, which needs this block; it can stay empty
+  "previews": {}
 }

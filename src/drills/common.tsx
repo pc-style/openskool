@@ -81,6 +81,9 @@ function lockLine(t: RoundTiming) {
  * When a round's `play()` resolves timing, a beat strip follows the audio and the answers stay locked
  * until `enableAt` has been heard.
  */
+/** The bars a round plays, for its strip: prompts and marks ("Cut", "Deck B in") talk in bars, so the strip counts bars. */
+const barsOf = (t: RoundTiming) => (t.end === undefined ? 4 : Math.max(1, Math.round(((t.end - t.start) * t.bpm) / 240)))
+
 export function ChoiceDrill({
   rounds,
   make,
@@ -95,6 +98,8 @@ export function ChoiceDrill({
 }) {
   const [i, setI] = useState(0)
   const [round, setRound] = useState<ChoiceRound | null>(null)
+  // the round index `round` was made for: until the new round is ready, the last one is not shown under the new index
+  const [roundI, setRoundI] = useState(-1)
   const [picked, setPicked] = useState<string | null>(null)
   const [right, setRight] = useState(0)
   const [wrong, setWrong] = useState(0)
@@ -146,6 +151,7 @@ export function ChoiceDrill({
     Promise.resolve(make(i)).then((r) => {
       if (!live) return
       setRound(r)
+      setRoundI(i)
       setLocked(!!r.play)
       begin(r, true)
     })
@@ -240,17 +246,23 @@ export function ChoiceDrill({
   const answerLabel = round?.options.find((o) => o.id === round.answer)?.label
   const nw = timed ? 2 : String(rounds).length
 
-  /** The answer's feedback. Both versions are laid out invisibly before the answer, so answering does not grow the drill. */
-  const feedback = (r: ChoiceRound, ok: boolean, live = false) => (
-    <div className={live ? 'feedback fade-in' : 'feedback'} role={live ? 'status' : undefined}>
-      <p>
-        <strong className={ok ? 'good' : 'bad'}>{ok ? 'Correct. ' : 'Not quite. '}</strong>
-        {r.explain}
-      </p>
-      {r.tip && <p className="tip">{r.tip}</p>}
-      {r.visual}
-    </div>
+  /**
+   * The answer's feedback: the verdict right under the options, the coaching after Next. Both versions
+   * are laid out invisibly before the answer, so answering does not grow the drill.
+   */
+  const verdict = (r: ChoiceRound, ok: boolean, live = false) => (
+    <p className={live ? 'feedback fade-in' : 'feedback'} role={live ? 'status' : undefined}>
+      <strong className={ok ? 'good' : 'bad'}>{ok ? 'Correct. ' : 'Not quite. '}</strong>
+      {r.explain}
+    </p>
   )
+  const coaching = (r: ChoiceRound, live = false) =>
+    (r.tip || r.visual) && (
+      <div className={live ? 'coaching fade-in' : 'coaching'}>
+        {r.tip && <p className="tip">{r.tip}</p>}
+        {r.visual}
+      </div>
+    )
   const skipButton = (
     <button className="ghost" onClick={skip}>
       Skip <kbd>S</kbd>
@@ -265,26 +277,31 @@ export function ChoiceDrill({
   return (
     <div className="choice">
       <div className="drill-meta">
+        {/* each value ends its group, so the room it reserves trails it unseen instead of opening a gap */}
         {timed ? (
           <span className={left <= 10 ? 'hot' : ''}>
-            <Value v={Math.max(0, left)} w={2} /> s left
+            <Value v={`${Math.max(0, left)} s left`} w={9} start />
           </span>
         ) : (
           <span>
-            Round <Value v={Math.min(i + 1, rounds)} w={nw} /> of {rounds}
+            Round <Value v={`${Math.min(i + 1, rounds)} of ${rounds}`} w={4 + 2 * nw} start />
           </span>
         )}
-        <span>
-          <Value v={right} w={nw} /> right · <Value v={wrong} w={nw} /> wrong
+        <span className="meta-counts">
           {/* the streak keeps its place while hidden, so the counts beside it stay put */}
           <span className={streak >= 2 ? undefined : 'invisible'} aria-hidden={streak < 2 || undefined}>
-            {' '}
-            · streak <Value v={streak} w={nw} />
+            <Value v={streak} w={nw} /> in a row
+          </span>
+          <span>
+            <Value v={right} w={nw} /> right
+          </span>
+          <span>
+            <Value v={wrong} w={nw} /> wrong
           </span>
         </span>
       </div>
-      <Swap k={round ? `r${i}` : `l${i}`} hold>
-      {!round ? (
+      <Swap k={round && roundI === i ? `r${i}` : `l${i}`} hold>
+      {!round || roundI !== i ? (
         <div className="loading">Preparing audio…</div>
       ) : (
         <>
@@ -292,7 +309,7 @@ export function ChoiceDrill({
           <h2 className="prompt">{round.prompt}</h2>
           {round.sub && <p className="sub">{round.sub}</p>}
           {/* the beat strip and lock line keep their room while the audio starts, so the options do not drop */}
-          {round.play && (timing ? <BarCounter timing={timing} cells={4} /> : <Reserve shape={<BarCounter timing={STILL_TIMING} cells={4} still />} />)}
+          {round.play && (timing ? <BarCounter timing={timing} cells={barsOf(timing)} unit="bar" /> : <Reserve shape={<BarCounter timing={STILL_TIMING} cells={4} unit="bar" still />} />)}
           {round.play && (
             <Swap k={locked && !picked && timing ? 'locked' : 'open'} className="lockline">
               {locked && !picked && timing ? <span role="status">{lockLine(timing)}</span> : <span>&nbsp;</span>}
@@ -312,6 +329,11 @@ export function ChoiceDrill({
               )
             })}
           </div>
+          {!timed && (
+            <Reserve shape={[verdict(round, true), verdict(round, false)]}>
+              {picked && verdict(round, picked === round.answer, true)}
+            </Reserve>
+          )}
           <div className="row">
             {round.play && (
               <button className="ghost" onClick={() => begin(round, false)}>
@@ -333,11 +355,7 @@ export function ChoiceDrill({
               {picked && picked !== round.answer ? <>Answer: {answerLabel}</> : '\u00a0'}
             </p>
           )}
-          {!timed && (
-            <Reserve shape={[feedback(round, true), feedback(round, false)]}>
-              {picked && feedback(round, picked === round.answer, true)}
-            </Reserve>
-          )}
+          {!timed && (round.tip || round.visual) && <Reserve shape={coaching(round)}>{picked && coaching(round, true)}</Reserve>}
         </>
       )}
       </Swap>
@@ -437,7 +455,10 @@ export function TapPad({
           <span className="tap-grade">&nbsp;</span>
         )}
       </Swap>
-      <small>Space bar or tap here</small>
+      <small>
+        <span className="pointer-fine">Space bar or tap here</span>
+        <span className="pointer-touch">Tap here</span>
+      </small>
     </button>
   )
 }

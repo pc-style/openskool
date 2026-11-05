@@ -93,8 +93,10 @@ function Drill({ id }: { id: string }) {
   // why "My tracks" is off, when it is
   const mineOff = !mineCount
     ? allTracks.length
-      ? `My tracks is off: your ${allTracks.length === 1 ? 'track has' : `${allTracks.length} tracks have`} no tempo and grid yet${allTracks.some((t) => t.status === 'analysing') ? ' (still analysing)' : ''}.`
-      : 'My tracks is off: there is no music in your Library yet.'
+      ? allTracks.some((t) => t.status === 'analysing')
+        ? 'Your tracks are still analysing.'
+        : 'Your tracks need a tempo and grid before drills can use them.'
+      : 'Want to drill on your own music?'
     : ''
   const kind: SourceKind = meta.audio === 'mine' && s.settings.source === 'mine' && mineCount ? 'mine' : 'builtin'
   const genre = s.settings.genre
@@ -117,7 +119,7 @@ function Drill({ id }: { id: string }) {
   const aheadGenres = picker ? (Object.keys(GENRES) as Genre[]).filter(isAhead) : []
   const advisory = (g: Genre) => (
     <p className="muted small">
-      {GENRES[g].name} {GENRES[g].bpm} is ahead of where you are: it is recommended from {WORLDS.find((w) => w.genre === g)!.xp.toLocaleString()} XP. Faster tempos leave less room for error, so expect lower scores at first.
+      Recommended from {WORLDS.find((w) => w.genre === g)!.xp.toLocaleString()} XP. Expect lower scores at first.
     </p>
   )
   const overall = best(s, meta.id)
@@ -195,7 +197,8 @@ function Drill({ id }: { id: string }) {
         <Link to={meta.audio === 'none' ? '/train?tab=knowledge' : '/train'}>{meta.audio === 'none' ? 'Knowledge' : 'Train'}</Link> / {meta.skill}
       </div>
       <h1>{meta.name}</h1>
-      <p className="drill-desc">{meta.blurb}</p>
+      {/* the description introduces the drill; once it runs, the round has the room */}
+      {(phase === 'intro' || phase === 'learn') && <p className="drill-desc">{meta.blurb}</p>}
       <Swap k={`${phase}-${runKey}`}>
         {phase === 'intro' && (
           <div className="intro">
@@ -205,18 +208,12 @@ function Drill({ id }: { id: string }) {
               {worldMultNow > 1 && <> · {worldMultNow}× XP in {GENRES[genre].name}</>}
               {daily && <> · <span className="fg">2× XP today</span></>}
             </p>
-            <ul className="teach">
-              {meta.teach.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ul>
-            {meta.audio !== 'none' && meta.audioNote && <p className="muted small">{meta.audioNote}</p>}
             {picker && (
               <div className="source">
                 <span className="label">Audio</span>
                 <div className="seg-group source-wide" role="group" aria-label="Audio source">
-                  {meta.audio === 'mine' && (
-                    <button className={kind === 'mine' ? 'seg on' : 'seg'} disabled={!mineCount} onClick={() => updateSettings({ source: 'mine' })} title={mineOff} aria-describedby={mineOff ? 'mine-off' : undefined}>
+                  {meta.audio === 'mine' && mineCount > 0 && (
+                    <button className={kind === 'mine' ? 'seg on' : 'seg'} onClick={() => updateSettings({ source: 'mine' })}>
                       My tracks ({mineCount})
                     </button>
                   )}
@@ -234,11 +231,7 @@ function Drill({ id }: { id: string }) {
                   value={kind === 'mine' ? 'mine' : genre}
                   onChange={(e) => (e.target.value === 'mine' ? updateSettings({ source: 'mine' }) : updateSettings({ source: 'builtin', genre: e.target.value as Genre }))}
                 >
-                  {meta.audio === 'mine' && (
-                    <option value="mine" disabled={!mineCount}>
-                      My tracks ({mineCount})
-                    </option>
-                  )}
+                  {meta.audio === 'mine' && mineCount > 0 && <option value="mine">My tracks ({mineCount})</option>}
                   {(Object.keys(GENRES) as Genre[]).map((g) => (
                     <option key={g} value={g}>
                       {GENRES[g].name} {GENRES[g].bpm}
@@ -248,17 +241,10 @@ function Drill({ id }: { id: string }) {
                 </select>
               </div>
             )}
-            {meta.audio === 'mine' && !mineCount && (
-              <p className="muted small mine-note" id="mine-off">
-                {mineOff} <Link to="/library">{allTracks.length ? 'Open the Library' : 'Add your own tracks'}</Link> and every audio drill that offers My tracks runs on your music.
-              </p>
-            )}
             {meta.decks === 2 && kind === 'mine' && mineCount === 1 && (
               <p className="muted small">You have one track, so deck B will be a contrasting built-in groove played at your track's tempo.</p>
             )}
             {meta.needs && kind === 'mine' && <p className="muted small">{meta.needs}</p>}
-            {/* while any world is ahead of you, its note keeps its room, so switching worlds does not move Start */}
-            {aheadGenres.length > 0 && <Reserve className="advisory" shape={aheadGenres.map(advisory)}>{aheadOfYou && advisory(genre)}</Reserve>}
             <div className="row start-row">
               {Learn ? (
                 <>
@@ -286,14 +272,66 @@ function Drill({ id }: { id: string }) {
                 )}
               </span>
             </div>
+            {/* one line under Start: the advice for a world ahead of you, else the pointer to your own music.
+                While any world is ahead, the line keeps room for its note, so switching worlds moves nothing */}
+            {(() => {
+              const mineNote = meta.audio === 'mine' && !mineCount && (
+                <p className="muted small mine-note">
+                  {mineOff} <Link to="/library">{allTracks.length ? 'Open the Library\u00a0→' : 'Add tracks in the Library\u00a0→'}</Link>
+                </p>
+              )
+              if (!aheadGenres.length) return mineNote || null
+              return (
+                <Reserve className="advisory" shape={[...aheadGenres.map(advisory), mineNote]}>
+                  {aheadOfYou ? advisory(genre) : mineNote}
+                </Reserve>
+              )
+            })()}
+            <h3 className="intro-head">How it works</h3>
+            {(() => {
+              // "Term: explanation" lines lead with their term, so a list of definitions scans;
+              // when there are definitions, the other lines (how a run goes) follow as plain paragraphs
+              const def = (t: string) => /^(?!Then:)([A-Z][\w &]{0,14}): (.*)$/s.exec(t)
+              const defs = meta.teach.filter((t) => def(t))
+              const list = defs.length >= 2
+              const rest = list ? meta.teach.filter((t) => !def(t)) : []
+              return (
+                <>
+                  <ul className="teach">
+                    {(list ? defs : meta.teach).map((t) => {
+                      const m = def(t)
+                      return (
+                        <li key={t}>
+                          {m ? (
+                            <>
+                              <b>{m[1]}</b> {m[2]}
+                            </>
+                          ) : (
+                            t
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {rest.map((t) => (
+                    <p key={t} className="teach-note">
+                      {t}
+                    </p>
+                  ))}
+                </>
+              )
+            })()}
+            {meta.audio !== 'none' && meta.audioNote && <p className="muted small">{meta.audioNote}</p>}
           </div>
         )}
         {phase === 'learn' && Learn && (
           <div className="learn-stage">
             <div className="stage-bar">
-              <span className="muted small">Learn</span>
+              <button className="ghost" onClick={() => setPhase('intro')}>
+                ← Intro
+              </button>
               <button className="ghost" onClick={start}>
-                Skip to quiz
+                Skip to quiz →
               </button>
             </div>
             <Learn onQuiz={start} />
@@ -337,62 +375,60 @@ function Results({ r, again, changeAudio, learn }: { r: RunResult; again: () => 
   const d = r.detail
   const g = d?.grades
   const total = r.xp.score + r.xp.world + r.xp.daily + r.xp.first + r.xp.missions
-  const parts = [`score ${r.xp.score}`, r.xp.world && `${r.xp.worldName} +${r.xp.world}`, r.xp.daily && `daily 2× +${r.xp.daily}`, r.xp.first && `first play +${r.xp.first}`, r.xp.missions && `mission +${r.xp.missions}`].filter(Boolean)
+  // the score's own XP is implied by the ring; only the extras on top are named
+  const extras = [r.xp.world && `${r.xp.worldName} +${r.xp.world}`, r.xp.daily && `daily 2× +${r.xp.daily}`, r.xp.first && `first play +${r.xp.first}`, r.xp.missions && `mission +${r.xp.missions}`].filter(Boolean)
   const next = r.next && drillById(r.next.drill)
+  const facts = [
+    d?.total !== undefined && `${d.right ?? 0} of ${d.total} right`,
+    d?.bestStreak !== undefined && `best streak ${d.bestStreak}`,
+    `+${total} XP`,
+  ].filter(Boolean)
   return (
     <div className="results">
-      <ScoreRing score={r.score} />
-      <div className="results-lines">
-        {(d?.total !== undefined || d?.bestStreak !== undefined) && (
-          <p className="tabular">
-            {d.total !== undefined && `${d.right ?? 0}/${d.total} right`}
-            {d.total !== undefined && d.bestStreak !== undefined && ' · '}
-            {d.bestStreak !== undefined && `best streak ${d.bestStreak}`}
-          </p>
-        )}
-        {g && (
-          <p className="tabular muted">
-            Perfect {g.perfect} · Good {g.good}
-            {g.close !== undefined && ` · Close ${g.close}`} · Off {g.off}
-            {g.miss > 0 && ` · Missed ${g.miss}`}
-          </p>
-        )}
-        {r.score > r.prevBest && <p className="unlock">New best{r.prevBest > 0 && <span className="muted">, was {r.prevBest}</span>}</p>}
-        {r.missions.map((m) => (
-          <p key={m} className="unlock">
-            Mission complete: {m}
-          </p>
-        ))}
-        {r.progress && (
-          <p className="muted tabular">
-            <span className="fg">
-              {r.progress.best} / {r.progress.min}
-            </span>{' '}
-            for the Week {r.progress.week} mission
-          </p>
-        )}
-        {r.badges.map((b) => (
-          <p key={b} className="unlock">
-            Badge earned: {b}
-          </p>
-        ))}
-      </div>
-
-      <div className="xp-box">
-        <p className="xp-total tabular">
-          +{total} XP <span className="muted small">{parts.join(' · ')}</span>
-        </p>
-        {r.rank.up && <p className="unlock">Rank up: {r.rank.name}</p>}
-        {r.rank.next ? (
-          <div className="xp-rank">
-            <DMeter value={(r.rank.xp - r.rank.from) / (r.rank.next.xp - r.rank.from)} label={`${r.rank.next.xp - r.rank.xp} XP to ${r.rank.next.name}`} />
-            <span className="muted small tabular">
-              {r.rank.name} · {(r.rank.next.xp - r.rank.xp).toLocaleString()} XP to {r.rank.next.name}
-            </span>
-          </div>
-        ) : (
-          <p className="muted small">{r.rank.name}, the top rank.</p>
-        )}
+      <p className="label results-label">Run complete</p>
+      <div className="results-head">
+        <ScoreRing score={r.score} />
+        <div className="results-lines">
+          <p className="results-facts tabular">{facts.join(' · ')}</p>
+          {extras.length > 0 && <p className="muted small tabular">Includes {extras.join(' · ')}</p>}
+          {g && (
+            <p className="tabular muted small">
+              Perfect {g.perfect} · Good {g.good}
+              {g.close !== undefined && ` · Close ${g.close}`} · Off {g.off}
+              {g.miss > 0 && ` · Missed ${g.miss}`}
+            </p>
+          )}
+          {r.score > r.prevBest && <p className="unlock">New best{r.prevBest > 0 && <span className="muted">, was {r.prevBest}</span>}</p>}
+          {r.missions.map((m) => (
+            <p key={m} className="unlock">
+              Mission complete: {m}
+            </p>
+          ))}
+          {r.progress && (
+            <p className="muted small tabular">
+              <span className="fg">
+                {r.progress.best} / {r.progress.min}
+              </span>{' '}
+              for the Week {r.progress.week} mission
+            </p>
+          )}
+          {r.badges.map((b) => (
+            <p key={b} className="unlock">
+              Badge earned: {b}
+            </p>
+          ))}
+          {r.rank.up && <p className="unlock">Rank up: {r.rank.name}</p>}
+          {r.rank.next ? (
+            <div className="xp-rank">
+              <DMeter value={(r.rank.xp - r.rank.from) / (r.rank.next.xp - r.rank.from)} label={`${r.rank.next.xp - r.rank.xp} XP to ${r.rank.next.name}`} />
+              <span className="muted small tabular">
+                {r.rank.name} · {(r.rank.next.xp - r.rank.xp).toLocaleString()} XP to {r.rank.next.name}
+              </span>
+            </div>
+          ) : (
+            <p className="muted small">{r.rank.name}, the top rank.</p>
+          )}
+        </div>
       </div>
 
       <div className="row results-actions">
@@ -404,26 +440,49 @@ function Results({ r, again, changeAudio, learn }: { r: RunResult; again: () => 
         <button className={next ? '' : 'primary'} onClick={again}>
           Again <kbd>R</kbd>
         </button>
-        {changeAudio && <button onClick={changeAudio}>Change audio</button>}
-        {learn && <button onClick={learn}>Learn again</button>}
-        <Link to="/" className="button">
-          Today
+        {changeAudio && (
+          <button className="ghost" onClick={changeAudio}>
+            Change audio
+          </button>
+        )}
+        {learn && !d?.misses?.length && (
+          <button className="ghost" onClick={learn}>
+            Review the rules
+          </button>
+        )}
+        <Link to="/" className="button ghost results-home">
+          Back to Today
         </Link>
       </div>
 
       {d?.misses && d.misses.length > 0 && (
         <section className="misses">
-          <h3>Missed rounds</h3>
-          <ul>
-            {d.misses.map((m, k) => (
-              <li key={k}>
-                <span className="miss-prompt">{m.prompt}</span>
-                <span className="muted small">
-                  Your pick: <span className="bad">{m.picked}</span> · Answer: <span className="fg">{m.answer}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="misses-head">
+            <h3>Missed rounds</h3>
+            {learn && (
+              <button className="ghost link-button" onClick={learn}>
+                Review the rules →
+              </button>
+            )}
+          </div>
+          <table className="miss-table">
+            <thead>
+              <tr>
+                <th>Round</th>
+                <th>Yours</th>
+                <th>Correct</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.misses.map((m, k) => (
+                <tr key={k}>
+                  <td>{m.prompt}</td>
+                  <td className="bad">{m.picked}</td>
+                  <td>{m.answer}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       )}
     </div>

@@ -294,7 +294,7 @@ export function CamelotWheel({
                 })
               }
             >
-              <path d={seg(n, r0, r1)} fill={fillOf(code)} stroke="var(--border)" />
+              <path d={seg(n, r0, r1)} fill={fillOf(code)} stroke="var(--control-border)" />
               <text
                 x={c + ((r0 + r1) / 2) * Math.sin((n * Math.PI) / 6)}
                 y={c - ((r0 + r1) / 2) * Math.cos((n * Math.PI) / 6) + 4}
@@ -306,6 +306,8 @@ export function CamelotWheel({
             </g>
           )
         })}
+        {/* the start key is outlined, so it reads apart from its shaded neighbours */}
+        {start && start !== answer && <path d={segOf(start)} fill="none" stroke="var(--foreground)" strokeWidth={1.75} pointerEvents="none" />}
         {highlight.map((m) => (
           <path
             key={`${m.code}-${m.tone}`}

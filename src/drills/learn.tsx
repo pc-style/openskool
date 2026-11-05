@@ -268,21 +268,7 @@ export function CamelotLearn({ onQuiz }: LearnProps) {
   const boost = boostOf(sel)
   return (
     <div className="learn">
-      <ol className="learn-rules">
-        <li>
-          <strong>Numbers 1 to 12 go round the wheel.</strong> <span className="muted">Each step is a fifth apart, so neighbours share most of their notes.</span>
-        </li>
-        <li>
-          <strong>A is minor, on the inner ring. B is major, on the outer ring.</strong> <span className="muted">8A is A minor, 8B is C major.</span>
-        </li>
-        <li>
-          <strong>Three safe moves: one step either way, or swap the letter.</strong> <span className="muted">Staying on the same code is safe too. These blend for as long as you like.</span>
-        </li>
-        <li>
-          <strong>+2 is an energy boost, not a safe neighbour.</strong> <span className="muted">Two steps on lifts the mood, but the keys rub, so keep that blend short.</span>
-        </li>
-      </ol>
-
+      <p className="learn-lead">Safe moves: stay on the same code, step one either way, or swap A and B.</p>
       <div className="seg-group learn-modes" role="group" aria-label="Mode">
         <button className={`seg${mode === 'explore' ? ' on' : ''}`} aria-pressed={mode === 'explore'} onClick={() => setMode('explore')}>
           Explore the wheel
@@ -297,7 +283,10 @@ export function CamelotLearn({ onQuiz }: LearnProps) {
           <div className="cam-cols">
             <CamelotWheel start={sel} onSelect={setSel} highlight={[{ code: boost, tone: 'boost' }]} />
             <div className="cam-panel" aria-live="polite">
-              <p className="muted small">Click any key.</p>
+              <p className="muted small">
+                <span className="pointer-fine">Click any key.</span>
+                <span className="pointer-touch">Tap any key.</span>
+              </p>
               <Swap k={sel} hold>
                 <p className="learn-lead">
                   {sel} · {keyName(sel)}
@@ -325,6 +314,22 @@ export function CamelotLearn({ onQuiz }: LearnProps) {
           <CamelotTry onQuiz={onQuiz} />
         )}
       </Swap>
+
+      <h3 className="learn-sub">How the wheel works</h3>
+      <ol className="learn-rules">
+        <li>
+          <strong>Numbers 1 to 12 go round the wheel.</strong> <span className="muted">Each step is a fifth apart, so neighbours share most of their notes.</span>
+        </li>
+        <li>
+          <strong>A is minor, on the inner ring. B is major, on the outer ring.</strong> <span className="muted">8A is A minor, 8B is C major.</span>
+        </li>
+        <li>
+          <strong>Three safe moves: one step either way, or swap the letter.</strong> <span className="muted">Staying on the same code is safe too. These blend for as long as you like.</span>
+        </li>
+        <li>
+          <strong>+2 is an energy boost, not a safe neighbour.</strong> <span className="muted">Two steps on lifts the mood, but the keys rub, so keep that blend short.</span>
+        </li>
+      </ol>
 
       <QuizFoot onQuiz={onQuiz} note="The quiz asks for a safe neighbour, a key's code, the +2 boost, or which transition clashes." />
     </div>

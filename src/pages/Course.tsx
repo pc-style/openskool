@@ -18,13 +18,11 @@ export function Course() {
   return (
     <div className="course">
       <h1>The course</h1>
-      <p className="muted">
-        Eight weeks, from counting bars to recording a full mix. All weeks are open. Missions are drill scores or a step in the app, practice tasks are for your own decks.
-      </p>
+      <p className="muted page-intro">Eight weeks, from counting bars to recording a full mix. Every week is open.</p>
       <div className="course-progress">
         <DMeter value={done / total} label={`${done} of ${total} complete`} />
         <span className="muted small tabular">
-          {done} of {total} complete
+          {done} of {total} tasks complete
         </span>
       </div>
       <ol className="weeks">
@@ -47,8 +45,8 @@ export function Course() {
                   <span className="wp-meter">
                     <DMeter value={md / all} height={6} label={`${md} of ${all} done`} />
                   </span>
-                  <span className="tabular">
-                    {md}/{all}
+                  <span className="tabular" title="Missions and practice tasks done">
+                    {md} of {all} tasks
                   </span>
                 </span>
                 <span className="chev" aria-hidden="true" />
@@ -56,21 +54,10 @@ export function Course() {
               {isOpen && (
                 <div className={`week-body ${touched ? 'fade-in' : ''}`}>
                   <p className="goal">{w.goal}</p>
-                  {w.lessons.map((l) => (
-                    <div key={l.title} className="lesson">
-                      <h3>{l.title}</h3>
-                      <p>{l.body}</p>
-                      {l.link && (
-                        <p className="lesson-link">
-                          <Link to={l.link.to}>{l.link.text} →</Link>
-                        </p>
-                      )}
-                    </div>
-                  ))}
                   <div className="missions-head">
                     <h3 className="label">Missions</h3>
                     <span className="muted small tabular">
-                      +{MISSION_XP} XP each · {w.missions.filter((m) => missionDone(s, m)).length}/{w.missions.length} done{w.n === cur.n ? ' this week' : ''}
+                      +{MISSION_XP} XP each · {w.missions.filter((m) => missionDone(s, m)).length} of {w.missions.length} missions done
                     </span>
                   </div>
                   <ul className="missions">
@@ -89,7 +76,10 @@ export function Course() {
                               <b>{m.text}</b>
                               <span className="muted"> · in the app</span>
                             </span>
-                            <span className="mission-meter muted small">{ok ? 'Done' : 'Not yet'}</span>
+                            <span className="mission-meter">
+                              <span className="mm-bar" />
+                              <span className="muted small">{ok ? 'Done' : 'Not yet'}</span>
+                            </span>
                             <Link to={m.to} className="button small">
                               {ok ? 'Open' : 'Go'}
                             </Link>
@@ -102,15 +92,12 @@ export function Course() {
                           {mark}
                           <span className="mission-text">
                             <b>{d.name}</b>
-                            <span className="muted">
-                              {' '}
-                              · score {m.min}+{m.genre && ` in ${GENRES[m.genre].name} ${GENRES[m.genre].bpm}`}
-                            </span>
+                            {m.genre && <span className="muted"> · in {GENRES[m.genre].name} {GENRES[m.genre].bpm}</span>}
                           </span>
                           <span className="mission-meter">
-                            <DMeter value={b / m.min} height={6} color={ok ? 'green' : 'ink'} label={`Best ${b} of ${m.min}`} />
-                            <span className="muted small tabular">
-                              {b || '—'} / {m.min}
+                            <span className="mm-bar">{b > 0 && <DMeter value={b / m.min} height={6} color={ok ? 'green' : 'ink'} label={`Best ${b} of ${m.min}`} />}</span>
+                            <span className="muted small tabular" title={`Your best against the target of ${m.min}`}>
+                              {b ? <span className="fg">{b}</span> : '–'} / {m.min}
                             </span>
                           </span>
                           <Link to={missionLink(m)} className="button small">
@@ -131,6 +118,25 @@ export function Course() {
                       </li>
                     ))}
                   </ul>
+                  {/* the reading sits under the work, one click away */}
+                  <details className="notes">
+                    <summary>
+                      Lesson notes <span className="muted tabular">· {w.lessons.length}</span>
+                    </summary>
+                    {w.lessons.map((l) => (
+                      <div key={l.title} className="lesson">
+                        <h3>{l.title}</h3>
+                        {l.body.split('\n\n').map((p) => (
+                          <p key={p}>{p}</p>
+                        ))}
+                        {l.link && (
+                          <p className="lesson-link">
+                            <Link to={l.link.to}>{l.link.text} →</Link>
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </details>
                 </div>
               )}
             </li>

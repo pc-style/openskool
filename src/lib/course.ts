@@ -43,7 +43,7 @@ export const WEEKS: Week[] = [
       },
       {
         title: 'Library → decks → mixer → master',
-        body: 'DJ software and hardware share one layout: a library feeds the decks, each deck feeds a mixer channel, and the channels sum into the master output. Inside each channel the signal runs trim/gain → EQ → filter → channel fader → crossfader → master. Learn that order once and every mixer you meet will make sense.',
+        body: 'DJ software and hardware share one layout: a library feeds the decks, each deck feeds a mixer channel, and the channels sum into the master output. Inside each channel the signal runs:\n\ntrim/gain → EQ → filter → channel fader → crossfader → master\n\nLearn that order once and every mixer you meet will make sense.',
       },
       {
         title: 'The two-channel blend',

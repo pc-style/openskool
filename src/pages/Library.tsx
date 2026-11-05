@@ -15,16 +15,17 @@ declare global {
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
 const busyLabel = (
-  <>
+  <div className="drop-stack">
     <strong>Analysing…</strong>
-    <span>Tempo, beat grid, phrase, key and energy. A few seconds per track.</span>
-  </>
+    <span className="drop-sub">Tempo, beat grid, phrase, key and energy. A few seconds per track.</span>
+  </div>
 )
 const idleLabel = (
-  <>
-    <strong>Drop audio files here</strong>
-    <span>or click to choose. MP3, WAV, FLAC, AAC, OGG.</span>
-  </>
+  <div className="drop-stack">
+    <strong className="drop-hover">Drop audio files here</strong>
+    <span className="button primary">Choose audio files</span>
+    <span className="drop-sub">MP3, WAV, FLAC, AAC or OGG</span>
+  </div>
 )
 
 export function Library() {
@@ -48,12 +49,9 @@ export function Library() {
   return (
     <div className="library">
       <h1>Library</h1>
-      <p className="muted">
-        Bring your own songs. Files are analysed here (tempo, beat grid, phrase, key, energy) and stored in this browser only. Nothing is uploaded. Check the grid before
-        using a track for timing drills: the analysis is good, not perfect.
-      </p>
+      <p className="muted page-intro">Train on your own music. Tracks are analysed on this device and never uploaded.</p>
       <div
-        className={`drop ${drag ? 'over' : ''} ${busy ? 'busy' : ''}`}
+        className={`drop ${tracks.length ? '' : 'empty'} ${drag ? 'over' : ''} ${busy ? 'busy' : ''}`}
         role="button"
         tabIndex={0}
         onDragOver={(e) => {
@@ -85,7 +83,10 @@ export function Library() {
         <input ref={input} type="file" accept="audio/*" multiple hidden onChange={(e) => onFiles(e.target.files)} />
       </div>
       {tracks.length === 0 && (
-        <p className="muted small">Once openskool is installed (browser menu, Add to Home Screen), you can also share audio files to it from other apps.</p>
+        <details className="disclosure">
+          <summary>Other ways to import</summary>
+          <p className="muted small">Installed openskool (Add to Home Screen)? You can also share audio to it from other apps.</p>
+        </details>
       )}
       {tracks.length > 0 && (
         <>
@@ -95,6 +96,7 @@ export function Library() {
               {tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}
             </span>
           </div>
+          <p className="muted small">Check a track's beat grid before timing drills: the analysis is good, not perfect.</p>
           <table className="tracks">
             <thead>
               <tr>

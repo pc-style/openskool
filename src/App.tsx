@@ -154,7 +154,8 @@ function Shell({ children }: { children: React.ReactNode }) {
         <main>
           <Swap k={pathname}>{children}</Swap>
         </main>
-        <footer>Open source, MIT. Your tracks and progress never leave this browser.</footer>
+        {/* the privacy note belongs where your data lives, not under a running drill */}
+        {(pathname === '/library' || pathname === '/profile') && <footer>Open source, MIT. Your tracks and progress never leave this browser.</footer>}
       </div>
       <nav className="tabbar" aria-label="Sections">
         {TABS.map((t) => (

@@ -129,7 +129,9 @@ export const DRILLS: DrillMeta[] = [
     skill: 'Mixing & EQ',
     audio: 'mine',
     teach: [
-      'Low (below ~200 Hz) is kick and bass weight. Mid (~200 Hz–3 kHz) is vocals, synths, snare body. High (above ~3.5 kHz) is hats, air and sparkle.',
+      'Low: kick and bass weight, below ~200 Hz.',
+      'Mid: vocals, synths and snare body, ~200 Hz–3 kHz.',
+      'High: hats, air and sparkle, above ~3.5 kHz.',
       'The music plays full for two bars, then the EQ moves. Six rounds in three stages: first name the band that was killed; then tell a full kill from a partial cut; then two bands drop and you name the one left standing.',
     ],
   },
