@@ -2366,6 +2366,37 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
     margin: 0 auto;
     width: 100%;
   }
+  .ge-controls {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .ge-controls .ge-group {
+    margin-bottom: 8px;
+  }
+  .setting {
+    grid-template-columns: 1fr;
+  }
+  .calib-action {
+    justify-self: start;
+  }
+  .calib-action .reserve-live {
+    place-items: start;
+  }
+  .setting input:not([type]) {
+    width: 100%;
+  }
+  .hist-row {
+    grid-template-columns: minmax(0, 1fr) 40px;
+    gap: 4px 16px;
+  }
+  .hist-row .spark {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 560px) {
+  /* phones: Decks shows one panel at a time; the 560px query matches the waveform height in Decks.tsx */
   .deck-wave {
     height: 112px;
   }
@@ -2401,36 +2432,6 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
     border-top: 0;
     padding-top: 0;
   }
-  .ge-controls {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-  .ge-controls .ge-group {
-    margin-bottom: 8px;
-  }
-  .setting {
-    grid-template-columns: 1fr;
-  }
-  .calib-action {
-    justify-self: start;
-  }
-  .calib-action .reserve-live {
-    place-items: start;
-  }
-  .setting input:not([type]) {
-    width: 100%;
-  }
-  .hist-row {
-    grid-template-columns: minmax(0, 1fr) 40px;
-    gap: 4px 16px;
-  }
-  .hist-row .spark {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-}
-
-@media (max-width: 560px) {
   .tracks .energy-col,
   .tracks th:nth-child(3),
   .tracks td.key {
