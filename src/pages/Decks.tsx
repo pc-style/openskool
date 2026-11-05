@@ -92,6 +92,8 @@ const knobText = (k: keyof Mix, v: number) => {
   return `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} dB`
 }
 
+const NARROW = '(max-width: 560px)'
+
 export function Decks() {
   // the audio graph is built once; it is only wired to the output while the page is mounted
   const [{ master, chans }] = useState(() => {
@@ -428,7 +430,16 @@ function Deck({
   onLoaded: () => void
 }) {
   useTracks()
+  // phones give the overview less height, so the crossfader stays above the tab bar
+  const [narrow, setNarrow] = useState(() => typeof matchMedia !== 'undefined' && matchMedia(NARROW).matches)
+  useEffect(() => {
+    const m = matchMedia(NARROW)
+    const on = () => setNarrow(m.matches)
+    m.addEventListener('change', on)
+    return () => m.removeEventListener('change', on)
+  }, [])
   const [t, setT] = useState<Loaded | null>(null)
+  const picker = useRef<HTMLSelectElement>(null)
   const [pitch, setPitch] = useState(0)
   const [keylock, setKeylock] = useState(true)
   const [playing, setPlaying] = useState(false)
@@ -549,15 +560,15 @@ function Deck({
   const dur = ch.el.duration || 1
   const pitchText = `${pitch >= 0 ? '+' : '−'}${Math.abs(pitch).toFixed(2)}%`
   return (
-    <section className={`deck deck-${side.toLowerCase()}`} aria-label={`Deck ${side}`}>
+    <section className={`deck deck-${side.toLowerCase()}${t ? '' : ' empty'}`} aria-label={`Deck ${side}`}>
       <header className="deck-head">
         <span className="deck-side">{side}</span>
         <div className="deck-title">
           <Swap k={t?.name ?? ''}>{t ? t.name : <span className="muted">No track</span>}</Swap>
         </div>
-        <select onChange={(e) => void load(e.target.value)} value="" aria-label={`Load deck ${side}`}>
+        <select ref={picker} className={t ? 'ghost' : undefined} onChange={(e) => void load(e.target.value)} value="" aria-label={`Load deck ${side}`}>
           <option value="" disabled>
-            Load…
+            {t ? 'Change…' : 'Load…'}
           </option>
           <optgroup label="My tracks">
             {readyTracks().map((x) => (
@@ -579,7 +590,7 @@ function Deck({
         {t?.peaks ? (
           <DitherWave
             peaks={t.peaks}
-            height={176}
+            height={narrow ? 112 : 176}
             progress={pos / dur}
             head
             window={loop ? [loop.a / dur, loop.b / dur] : undefined}
@@ -587,7 +598,25 @@ function Deck({
             onSeek={(fr) => (el.current.currentTime = fr * dur)}
           />
         ) : (
-          <div className="deck-wave-empty muted small">No track loaded</div>
+          <div className="deck-wave-empty muted small">
+            No track loaded
+            {/* the deck's one action, here where the track will appear; it opens the same picker as the header */}
+            <button
+              className="primary small"
+              onClick={() => {
+                const s = picker.current
+                if (!s) return
+                s.focus()
+                try {
+                  s.showPicker()
+                } catch {
+                  // older browsers: the focused select is the fallback
+                }
+              }}
+            >
+              Load track
+            </button>
+          </div>
         )}
       </div>
       <div className="deck-info">

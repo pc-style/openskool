@@ -76,7 +76,7 @@ export function BarCounter({
           const on = k === current && (!hidden || isTarget)
           return (
             <div key={k} className="bc-cell">
-              <i className={`${on ? 'on' : ''} ${hidden ? 'hidden' : ''} ${isTarget ? 'target' : ''}`}>{isTarget ? target.text : loop && unit === 'beat' ? k + 1 : null}</i>
+              <i className={`${on ? 'on' : ''} ${hidden ? 'hidden' : ''} ${isTarget ? 'target' : ''}`}>{isTarget ? target.text : loop ? k + 1 : null}</i>
               <small className={marks.has(k) ? 'mark' : undefined}>{marks.get(k) ?? '\u00a0'}</small>
             </div>
           )

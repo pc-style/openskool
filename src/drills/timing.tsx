@@ -938,7 +938,7 @@ export function TapTempo({ source, onDone }: DrillProps) {
             items={{
               Estimate: (
                 <>
-                  <Value v={on && guess !== null ? guess.toFixed(1) : '–'} w={5} start /> <small>BPM</small>
+                  <Value v={on && guess !== null ? guess.toFixed(1) : '–'} w={4.3} /> <small>BPM</small>
                 </>
               ),
               Round: `${i + 1} of ${ROUNDS}`,

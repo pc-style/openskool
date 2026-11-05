@@ -81,6 +81,9 @@ function lockLine(t: RoundTiming) {
  * When a round's `play()` resolves timing, a beat strip follows the audio and the answers stay locked
  * until `enableAt` has been heard.
  */
+/** The bars a round plays, for its strip: prompts and marks ("Cut", "Deck B in") talk in bars, so the strip counts bars. */
+const barsOf = (t: RoundTiming) => (t.end === undefined ? 4 : Math.max(1, Math.round(((t.end - t.start) * t.bpm) / 240)))
+
 export function ChoiceDrill({
   rounds,
   make,
@@ -306,7 +309,7 @@ export function ChoiceDrill({
           <h2 className="prompt">{round.prompt}</h2>
           {round.sub && <p className="sub">{round.sub}</p>}
           {/* the beat strip and lock line keep their room while the audio starts, so the options do not drop */}
-          {round.play && (timing ? <BarCounter timing={timing} cells={4} /> : <Reserve shape={<BarCounter timing={STILL_TIMING} cells={4} still />} />)}
+          {round.play && (timing ? <BarCounter timing={timing} cells={barsOf(timing)} unit="bar" /> : <Reserve shape={<BarCounter timing={STILL_TIMING} cells={4} unit="bar" still />} />)}
           {round.play && (
             <Swap k={locked && !picked && timing ? 'locked' : 'open'} className="lockline">
               {locked && !picked && timing ? <span role="status">{lockLine(timing)}</span> : <span>&nbsp;</span>}
@@ -452,7 +455,10 @@ export function TapPad({
           <span className="tap-grade">&nbsp;</span>
         )}
       </Swap>
-      <small>Space bar or tap here</small>
+      <small>
+        <span className="pointer-fine">Space bar or tap here</span>
+        <span className="pointer-touch">Tap here</span>
+      </small>
     </button>
   )
 }

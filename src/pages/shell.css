@@ -90,6 +90,12 @@
   letter-spacing: 0;
   color: var(--foreground);
 }
+.teach-note {
+  max-width: 62ch;
+  margin: 12px 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.93rem;
+}
 .intro .teach b {
   font-weight: 600;
 }
@@ -119,10 +125,13 @@
   }
   /* the round, not the page furniture, gets the first screen */
   .drill-page .stage-bar {
-    margin-block: -12px 0;
+    margin-block: 4px 0;
   }
   .drill-page .prompt {
     margin: 8px auto 14px;
+  }
+  .drill-page .choice .sub {
+    margin: -8px 0 20px;
   }
 }
 
@@ -244,6 +253,10 @@
   .results-actions .button.primary {
     flex-basis: 100%;
   }
+  .miss-table td:not(:first-child),
+  .miss-table th:not(:first-child) {
+    width: 24%;
+  }
 }
 
 /* ---------- profile ---------- */
@@ -256,6 +269,11 @@
 }
 .rank-now p {
   margin: 0;
+}
+/* a column flex box: the meter takes the row's width, not flex: 1 along the column */
+.rank-now .dmeter {
+  flex: none;
+  width: 100%;
 }
 .rank-names {
   font-size: 1.067rem;

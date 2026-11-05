@@ -260,6 +260,25 @@
     border-left: 1px solid var(--border);
   }
 }
+/* phones: the estimate takes the full row, Round and Taps share the one under it */
+@media (max-width: 560px) {
+  .readout:has(.hero) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .readout .hero {
+    grid-column: 1 / -1;
+    padding-bottom: 8px;
+  }
+  .readout .hero + div {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .readout .hero ~ div {
+    border-top: 1px solid var(--border);
+    padding: 8px 6px 4px;
+  }
+}
 .deck .barcounter {
   width: 100%;
   max-width: none;
@@ -274,6 +293,12 @@
   font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1.1;
+}
+.readout .hero dd {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
 }
 .readout .hero dd small {
   font-size: 0.75rem;
@@ -299,7 +324,7 @@
   margin: 0;
 }
 .center > .skip {
-  margin-top: 0;
+  margin-top: -12px;
 }
 .readout .hot {
   color: var(--bad);

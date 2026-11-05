@@ -22,7 +22,7 @@ export function Course() {
       <div className="course-progress">
         <DMeter value={done / total} label={`${done} of ${total} complete`} />
         <span className="muted small tabular">
-          {done} of {total} complete
+          {done} of {total} tasks complete
         </span>
       </div>
       <ol className="weeks">
@@ -46,7 +46,7 @@ export function Course() {
                     <DMeter value={md / all} height={6} label={`${md} of ${all} done`} />
                   </span>
                   <span className="tabular" title="Missions and practice tasks done">
-                    {md} of {all}
+                    {md} of {all} tasks
                   </span>
                 </span>
                 <span className="chev" aria-hidden="true" />
@@ -57,7 +57,7 @@ export function Course() {
                   <div className="missions-head">
                     <h3 className="label">Missions</h3>
                     <span className="muted small tabular">
-                      +{MISSION_XP} XP each · {w.missions.filter((m) => missionDone(s, m)).length} of {w.missions.length} done
+                      +{MISSION_XP} XP each · {w.missions.filter((m) => missionDone(s, m)).length} of {w.missions.length} missions done
                     </span>
                   </div>
                   <ul className="missions">
@@ -126,7 +126,9 @@ export function Course() {
                     {w.lessons.map((l) => (
                       <div key={l.title} className="lesson">
                         <h3>{l.title}</h3>
-                        <p>{l.body}</p>
+                        {l.body.split('\n\n').map((p) => (
+                          <p key={p}>{p}</p>
+                        ))}
                         {l.link && (
                           <p className="lesson-link">
                             <Link to={l.link.to}>{l.link.text} →</Link>

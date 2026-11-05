@@ -207,6 +207,10 @@ kbd {
   min-height: 100vh;
 }
 .main-col {
+  /* a column as tall as the window, so a short page's footer sits at the bottom, not mid-page */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
   min-width: 0;
   max-width: 920px;
   width: 100%;
@@ -333,6 +337,9 @@ main {
 .tabbar {
   display: none;
 }
+main {
+  flex: 1 0 auto;
+}
 footer {
   margin-top: 64px;
   padding-top: 16px;
@@ -436,9 +443,9 @@ button:disabled {
   outline: 2px solid var(--focus, var(--ring));
   outline-offset: 2px;
 }
-/* a filled button's own edge already frames it: one ring hugging it, not a border, a gap and a halo */
+/* lime means right, progress or current; a filled button's focus ring is the plain foreground */
 .primary:focus-visible {
-  outline-offset: 0;
+  outline-color: var(--foreground);
 }
 .primary {
   background: var(--primary);
@@ -1390,15 +1397,36 @@ a.list-row:hover::before {
   font-size: 0.8rem;
 }
 /* touch screens and phones have no keyboard shortcuts to hint at */
+.pointer-touch {
+  display: none;
+}
 @media (pointer: coarse), (max-width: 560px) {
-  kbd {
+  kbd,
+  .pointer-fine {
     display: none;
   }
+  .pointer-touch {
+    display: inline;
+  }
 }
-/* touch screens and phones don't drop files: the button says it */
+/* touch screens and phones don't drop files: the button says it, without a drop box around it */
 @media (pointer: coarse), (max-width: 560px) {
   .drop-hover {
     display: none !important;
+  }
+  .drop.empty {
+    min-height: 0;
+    border: 0;
+    background: none;
+    padding: 4px 0 8px;
+    place-items: start;
+    text-align: left;
+  }
+  .drop.empty .drop-stack {
+    align-items: flex-start;
+  }
+  .drop.empty > .drop-label {
+    padding: 0;
   }
 }
 .drop.over,
@@ -1800,6 +1828,23 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
 /* the mixer: two channel strips with the labels between them */
 .deck-tabs {
   display: none;
+}
+/* an empty deck: its controls step back together, not as a row of separately faded buttons */
+.deck.empty .deck-info,
+.deck.empty .transport,
+.deck.empty .pads {
+  opacity: 0.45;
+}
+.deck.empty button:disabled,
+.deck.empty input:disabled {
+  opacity: 1;
+}
+.deck-wave-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
 }
 .mixer {
   border-left: 1px solid var(--border);
@@ -2283,8 +2328,11 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
     padding: 10px 14px;
   }
   .focus-card {
-    padding: 16px;
+    padding: 14px 16px;
     gap: 12px;
+  }
+  .focus-text p.muted {
+    margin-bottom: 12px;
   }
   .daily-art {
     width: 88px;
@@ -2314,6 +2362,12 @@ button[aria-pressed='true']:not(.seg):not(.pad):not(.toggle) {
     max-width: 320px;
     margin: 0 auto;
     width: 100%;
+  }
+  .deck-wave {
+    height: 112px;
+  }
+  .deck {
+    gap: 12px;
   }
   /* one panel at a time: a deck with the crossfader under it, or the mixer */
   .deck-tabs {

@@ -83,7 +83,7 @@
   border: 1px solid var(--border);
   border-radius: 3px;
   font-style: normal;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   line-height: 1;
   transition: background-color 80ms linear, border-color 80ms linear;
 }

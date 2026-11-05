@@ -288,23 +288,39 @@ function Drill({ id }: { id: string }) {
               )
             })()}
             <h3 className="intro-head">How it works</h3>
-            <ul className="teach">
-              {meta.teach.map((t) => {
-                // "Term: explanation" lines lead with their term, so a list of definitions scans
-                const m = /^(?!Then:)([A-Z][\w &]{0,14}): (.*)$/s.exec(t)
-                return (
-                  <li key={t}>
-                    {m ? (
-                      <>
-                        <b>{m[1]}</b> {m[2]}
-                      </>
-                    ) : (
-                      t
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
+            {(() => {
+              // "Term: explanation" lines lead with their term, so a list of definitions scans;
+              // when there are definitions, the other lines (how a run goes) follow as plain paragraphs
+              const def = (t: string) => /^(?!Then:)([A-Z][\w &]{0,14}): (.*)$/s.exec(t)
+              const defs = meta.teach.filter((t) => def(t))
+              const list = defs.length >= 2
+              const rest = list ? meta.teach.filter((t) => !def(t)) : []
+              return (
+                <>
+                  <ul className="teach">
+                    {(list ? defs : meta.teach).map((t) => {
+                      const m = def(t)
+                      return (
+                        <li key={t}>
+                          {m ? (
+                            <>
+                              <b>{m[1]}</b> {m[2]}
+                            </>
+                          ) : (
+                            t
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {rest.map((t) => (
+                    <p key={t} className="teach-note">
+                      {t}
+                    </p>
+                  ))}
+                </>
+              )
+            })()}
             {meta.audio !== 'none' && meta.audioNote && <p className="muted small">{meta.audioNote}</p>}
           </div>
         )}
